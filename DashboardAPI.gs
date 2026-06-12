@@ -33,3 +33,31 @@ function getDashboardStats(sessionId) {
 
   return buildResponse(true, "Dashboard stats retrieved", stats);
 }
+
+/**
+ * Get recent activity logs for the dashboard
+ */
+function getRecentActivity(sessionId) {
+  const auth = validateSession(sessionId);
+  if (!auth.success) return auth;
+
+  const auditSheet = getSheet(CONFIG.SHEETS.AUDIT_LOG);
+  if (!auditSheet) {
+    return buildResponse(true, "No recent activity", []);
+  }
+  
+  const logs = getRowsAsObjects(auditSheet);
+  
+  // Sort descending by timestamp
+  logs.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
+  
+  // Get top 5
+  const recent = logs.slice(0, 5).map(log => ({
+    timestamp: log.Timestamp,
+    user: log.User,
+    action: log.Action,
+    recordType: log.RecordType
+  }));
+
+  return buildResponse(true, "Recent activity retrieved", recent);
+}

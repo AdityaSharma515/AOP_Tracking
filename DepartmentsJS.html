@@ -20,6 +20,7 @@ async function loadDepartments() {
         if (res.success) {
             allDepartments = res.data;
             populateDepartmentTable();
+            populateDepartmentDropdowns();
         } else {
             showError(res.message);
         }
@@ -129,6 +130,37 @@ function populateDepartmentTable() {
             </td>
         `;
         tbody.appendChild(tr);
+    });
+}
+
+function handleAddDepartment() {
+    const nameInput = document.getElementById('newDeptName');
+    if (nameInput && nameInput.value) {
+        createDepartment(nameInput.value.trim());
+        nameInput.value = '';
+    } else {
+        showError("Department name is required");
+    }
+}
+
+function handleAddSubDepartment() {
+    const deptId = document.getElementById('parentDeptForSub').value;
+    const nameInput = document.getElementById('newSubDeptName');
+    if (deptId && nameInput && nameInput.value) {
+        createSubDepartment(deptId, nameInput.value.trim());
+        nameInput.value = '';
+    } else {
+        showError("Please select a department and enter a sub-department name");
+    }
+}
+
+function populateDepartmentDropdowns() {
+    const dropdown = document.getElementById('parentDeptForSub');
+    if (!dropdown) return;
+    
+    dropdown.innerHTML = '<option value="" selected disabled>Select Department</option>';
+    allDepartments.forEach(dept => {
+        dropdown.innerHTML += `<option value="${dept.DepartmentID}">${dept.DepartmentName}</option>`;
     });
 }
 </script>

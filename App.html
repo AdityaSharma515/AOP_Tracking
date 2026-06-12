@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Organization Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { min-height: calc(100vh - 56px); }
+        .hierarchy-container { min-height: 500px; background-color: #fafafa; position: relative; overflow: auto; border-radius: 0.5rem; }
+        .page-view { display: none; }
+        .page-view.active { display: block; }
+    </style>
+</head>
+<body>
+    <!-- Global Loader Placeholder -->
+    <div id="loader-placeholder"></div>
+
+    <!-- Login/Signup Container (No Navbar/Sidebar) -->
+    <div id="auth-container">
+        <div id="view-Login" class="page-view active"><?!= include('LoginView'); ?></div>
+        <div id="view-Signup" class="page-view"><?!= include('SignupView'); ?></div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="d-none">
+        <?!= include('Navbar'); ?>
+        <div class="container-fluid">
+            <div class="row">
+                <?!= include('Sidebar'); ?>
+                <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4" id="main-content">
+                    <div id="view-Dashboard" class="page-view"><?!= include('DashboardView'); ?></div>
+                    <div id="view-Employees" class="page-view"><?!= include('EmployeesView'); ?></div>
+                    <div id="view-Positions" class="page-view"><?!= include('PositionsView'); ?></div>
+                    <div id="view-Departments" class="page-view"><?!= include('DepartmentsView'); ?></div>
+                    <div id="view-Hierarchy" class="page-view"><?!= include('HierarchyView'); ?></div>
+                    <div id="view-Reports" class="page-view"><?!= include('ReportsView'); ?></div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <?!= include('CommonJS'); ?>
+    <?!= include('RouterJS'); ?>
+    <?!= include('LoginJS'); ?>
+    <?!= include('SignupJS'); ?>
+    <?!= include('DashboardJS'); ?>
+    <?!= include('EmployeesJS'); ?>
+    <?!= include('PositionsJS'); ?>
+    <?!= include('DepartmentsJS'); ?>
+    <?!= include('HierarchyJS'); ?>
+    <?!= include('ReportsJS'); ?>
+
+    <script>
+        // Init SPA Router on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialPage = urlParams.get('page') || 'Login';
+            
+            // Check session first
+            const session = await validateSession();
+            if (session) {
+                currentUserRole = session.role;
+                document.getElementById('navUserName').innerText = session.name || session.email.split('@')[0];
+                document.getElementById('navUserRole').innerText = "Role: " + session.role;
+                
+                if (initialPage === 'Login' || initialPage === 'Signup') {
+                    const isAdminOrHead = (currentUserRole === 'Admin' || currentUserRole === 'Plant Head');
+                    navigateTo(isAdminOrHead ? 'Dashboard' : 'Employees');
+                } else {
+                    navigateTo(initialPage);
+                }
+            } else {
+                navigateTo(initialPage === 'Signup' ? 'Signup' : 'Login');
+            }
+        });
+    </script>
+</body>
+</html>

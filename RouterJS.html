@@ -1,0 +1,62 @@
+<script>
+/**
+ * SPA Router
+ */
+let currentUserRole = null;
+
+function navigateTo(pageId) {
+    // Hide all pages
+    document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+    
+    // Deactivate all sidebar links
+    document.querySelectorAll('.nav-link').forEach(el => {
+        el.classList.remove('active', 'fw-bold');
+        if(!el.classList.contains('text-danger')) {
+             el.classList.add('text-dark');
+        }
+    });
+
+    const targetPage = document.getElementById('view-' + pageId);
+    if (targetPage) {
+        targetPage.classList.add('active');
+        
+        // Update sidebar if applicable
+        const navLink = document.querySelector(`#nav-${pageId} a`);
+        if (navLink) {
+            navLink.classList.remove('text-dark');
+            navLink.classList.add('active', 'fw-bold');
+        }
+    }
+
+    // Show/hide App Container vs Auth Container
+    if (pageId === 'Login' || pageId === 'Signup') {
+        document.getElementById('auth-container').classList.remove('d-none');
+        document.getElementById('app-container').classList.add('d-none');
+    } else {
+        document.getElementById('auth-container').classList.add('d-none');
+        document.getElementById('app-container').classList.remove('d-none');
+        
+        // Apply RBAC
+        applyRBAC();
+    }
+}
+
+function applyRBAC() {
+    if (!currentUserRole) return;
+    
+    const isAdminOrHead = (currentUserRole === 'Admin' || currentUserRole === 'Plant Head');
+    
+    const restrictedTabs = ['nav-Dashboard', 'nav-Positions', 'nav-Departments', 'nav-Hierarchy', 'nav-Reports'];
+    
+    restrictedTabs.forEach(tabId => {
+        const el = document.getElementById(tabId);
+        if (el) {
+            if (isAdminOrHead) {
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+    });
+}
+</script>

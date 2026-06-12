@@ -25,8 +25,8 @@ async function login(e) {
     e.preventDefault();
     if (!validateLoginForm()) return;
 
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
     const rememberMe = document.getElementById('rememberMe').checked;
     
     const submitBtn = document.querySelector('button[type="submit"]');
@@ -39,6 +39,8 @@ async function login(e) {
         const res = await server.loginUser(email, password);
         if (res.success) {
             localStorage.setItem('sessionId', res.data.sessionId);
+            currentUserRole = res.data.role;
+            const isAdminOrHead = (currentUserRole === 'Admin' || currentUserRole === 'Plant Head');
             
             if (rememberMe) {
                 rememberUser(email);
@@ -48,9 +50,8 @@ async function login(e) {
             
             showSuccess('Login successful. Redirecting...');
             
-            // Redirect logic based on role could be here, but defaulting to Dashboard
             setTimeout(() => {
-                window.top.location.href = "<?= ScriptApp.getService().getUrl() ?>?page=Dashboard";
+                navigateTo(isAdminOrHead ? 'Dashboard' : 'Employees');
             }, 1000);
         } else {
             showLoginError(res.message || 'Invalid credentials');
@@ -64,8 +65,8 @@ async function login(e) {
 }
 
 function validateLoginForm() {
-    const email = document.getElementById('email');
-    const password = document.getElementById('password');
+    const email = document.getElementById('loginEmail');
+    const password = document.getElementById('loginPassword');
     let isValid = true;
     
     if (!email.value || !email.value.includes('@')) {
@@ -86,8 +87,8 @@ function validateLoginForm() {
 }
 
 function togglePassword() {
-    const passwordInput = document.getElementById('password');
-    const icon = document.querySelector('#togglePassword i');
+    const passwordInput = document.getElementById('loginPassword');
+    const icon = document.querySelector('#toggleLoginPassword i');
     if (!passwordInput || !icon) return;
     
     if (passwordInput.type === 'password') {

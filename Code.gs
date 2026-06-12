@@ -174,23 +174,8 @@ function getDatabaseDebugInfo() {
  * Serves the requested HTML page
  */
 function doGet(e) {
-  // Default to Login page if no page parameter is provided
-  let page = e.parameter.page || "Login";
-
-  // Security check: ensure only valid pages can be requested
-  const validPages = [
-    "Login",
-    "Signup",
-    "Dashboard",
-    "Employees",
-    "Positions",
-    "Departments",
-    "Hierarchy",
-    "Reports",
-  ];
-  if (!validPages.includes(page)) {
-    page = "Login";
-  }
+  // Single Page Application serves App.html
+  let page = "App";
 
   return HtmlService.createTemplateFromFile(page)
     .evaluate()

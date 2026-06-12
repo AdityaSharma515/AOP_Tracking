@@ -3,16 +3,16 @@
  * js/signup.html
  */
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.querySelector('form');
+    const form = document.getElementById('signupForm');
     if (form) form.addEventListener('submit', registerUser);
     
-    const toggleBtn1 = document.getElementById('togglePassword');
-    const toggleBtn2 = document.getElementById('toggleConfirmPassword');
+    const toggleBtn1 = document.getElementById('toggleSignupPassword');
+    const toggleBtn2 = document.getElementById('toggleConfirmSignupPassword');
     
-    if (toggleBtn1) toggleBtn1.addEventListener('click', () => togglePassword('password', 'togglePassword'));
-    if (toggleBtn2) toggleBtn2.addEventListener('click', () => togglePassword('confirmPassword', 'toggleConfirmPassword'));
+    if (toggleBtn1) toggleBtn1.addEventListener('click', () => togglePassword('signupPassword', 'toggleSignupPassword'));
+    if (toggleBtn2) toggleBtn2.addEventListener('click', () => togglePassword('confirmSignupPassword', 'toggleConfirmSignupPassword'));
     
-    const pwInput = document.getElementById('password');
+    const pwInput = document.getElementById('signupPassword');
     if (pwInput) pwInput.addEventListener('input', checkPasswordStrength);
 });
 
@@ -20,12 +20,12 @@ async function registerUser(e) {
     e.preventDefault();
     if (!validateSignupForm()) return;
     
-    const fullName = document.getElementById('fullName').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const role = document.getElementById('role').value;
-    const password = document.getElementById('password').value;
+    const fullName = document.getElementById('signupFullName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const role = document.getElementById('signupRole').value;
+    const password = document.getElementById('signupPassword').value;
     
-    const submitBtn = document.querySelector('button[type="submit"]');
+    const submitBtn = document.getElementById('signupBtn');
     submitBtn.disabled = true;
     showLoader();
     
@@ -36,13 +36,15 @@ async function registerUser(e) {
             const loginRes = await server.loginUser(email, password);
             if (loginRes && loginRes.success) {
                 localStorage.setItem('sessionId', loginRes.data.sessionId);
+                currentUserRole = loginRes.data.role;
+                const isAdminOrHead = (currentUserRole === 'Admin' || currentUserRole === 'Plant Head');
                 setTimeout(() => {
-                    window.top.location.href = "<?= ScriptApp.getService().getUrl() ?>?page=Dashboard";
+                    navigateTo(isAdminOrHead ? 'Dashboard' : 'Employees');
                 }, 1000);
             } else {
                 showError('Auto-login failed. Please login manually.');
                 setTimeout(() => {
-                    window.top.location.href = "<?= ScriptApp.getService().getUrl() ?>?page=Login";
+                    navigateTo('Login');
                 }, 1500);
             }
         } else {
@@ -95,11 +97,11 @@ function togglePassword(inputId, btnId) {
 }
 
 function validateSignupForm() {
-    const fullName = document.getElementById('fullName').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const role = document.getElementById('role').value;
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
+    const fullName = document.getElementById('signupFullName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const role = document.getElementById('signupRole').value;
+    const password = document.getElementById('signupPassword').value;
+    const confirmPassword = document.getElementById('confirmSignupPassword').value;
     
     if (!fullName || !email || !role || !password || !confirmPassword) {
         showError("All fields are required.");

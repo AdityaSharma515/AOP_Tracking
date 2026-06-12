@@ -18,7 +18,8 @@ async function loadDashboard() {
             loadStatistics(),
             loadDepartmentSummary(),
             loadVacancySummary(),
-            loadAOPSummary()
+            loadAOPSummary(),
+            loadRecentActivity()
         ]);
     } catch (e) {
         showError("Failed to load dashboard data");
@@ -70,6 +71,44 @@ async function loadVacancySummary() {
 
 async function loadAOPSummary() {
     // Logic for loading AOP specific widgets/charts goes here
+}
+
+async function loadRecentActivity() {
+    const res = await server.getRecentActivity(localStorage.getItem('sessionId'));
+    if (res.success) {
+        const list = document.getElementById('recentActivityList');
+        if (list) {
+            list.innerHTML = '';
+            if (res.data.length === 0) {
+                list.innerHTML = '<li class="list-group-item px-0 text-center text-muted">No recent activity</li>';
+                return;
+            }
+            res.data.forEach(activity => {
+                const time = new Date(activity.timestamp).toLocaleString();
+                let icon = 'bi-info-circle text-primary';
+                if (activity.action === 'Create') icon = 'bi-plus-circle text-success';
+                else if (activity.action === 'Update') icon = 'bi-pencil text-warning';
+                else if (activity.action === 'Delete') icon = 'bi-trash text-danger';
+
+                list.innerHTML += `
+                    <li class="list-group-item px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="bi ${icon} fs-5"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <h6 class="mb-1 text-truncate" style="font-size: 0.9rem;">${activity.action} ${activity.recordType}</h6>
+                                <p class="mb-0 text-muted small text-truncate">by ${activity.user}</p>
+                            </div>
+                            <div class="flex-shrink-0 ms-2 text-muted" style="font-size: 0.75rem;">
+                                ${time}
+                            </div>
+                        </div>
+                    </li>
+                `;
+            });
+        }
+    }
 }
 
 function refreshDashboard() {

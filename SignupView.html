@@ -1,0 +1,68 @@
+    <div class="container py-5">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="text-center mb-4">
+                            <h4 class="fw-bold">Create Account</h4>
+                            <p class="text-muted">Register for a new account</p>
+                        </div>
+                        <form id="signupForm">
+                            <div class="mb-3">
+                                <label for="signupFullName" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="signupFullName" placeholder="John Doe" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="signupEmail" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="signupEmail" placeholder="name@company.com" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="signupRole" class="form-label">Role</label>
+                                <select class="form-select" id="signupRole" required>
+                                    <option value="" selected disabled>Select a role...</option>
+                                    <option value="Admin">Admin</option>
+                                    <option value="Plant Head">Plant Head</option>
+                                    <option value="AGM">AGM</option>
+                                    <option value="Sr Manager">Sr Manager</option>
+                                    <option value="Manager">Manager</option>
+                                    <option value="Assistant Manager">Assistant Manager</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="signupPassword" class="form-label">Password</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="signupPassword" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleSignupPassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmSignupPassword" class="form-label">Confirm Password</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="confirmSignupPassword" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleConfirmSignupPassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <p class="small text-muted mb-1">Password Requirements:</p>
+                                <ul class="small text-muted mb-0 ps-3">
+                                    <li>Minimum 8 characters</li>
+                                    <li>At least one uppercase letter</li>
+                                    <li>At least one lowercase letter</li>
+                                    <li>At least one number</li>
+                                    <li>At least one special character</li>
+                                </ul>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 mb-3" id="signupBtn">Create Account</button>
+                            <div class="text-center mt-3">
+                                <p class="text-muted small">Already have an account? <a href="#" onclick="navigateTo('Login'); return false;" class="text-decoration-none">Back To Login</a></p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>

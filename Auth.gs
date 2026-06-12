@@ -58,13 +58,14 @@ function loginUser(email, password) {
     userId: user.UserID,
     email: user.Email,
     role: user.Role,
+    name: user.Name,
     timestamp: new Date().getTime()
   };
 
   PropertiesService.getScriptProperties().setProperty(sessionId, JSON.stringify(sessionData));
   logAudit(user.Email, "Login", "Session", sessionId, "", "");
   
-  return buildResponse(true, "Login successful", { sessionId: sessionId, role: user.Role });
+  return buildResponse(true, "Login successful", { sessionId: sessionId, role: user.Role, name: user.Name });
 }
 
 /**
