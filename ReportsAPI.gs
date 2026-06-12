@@ -1,5 +1,3 @@
-// Reports.gs
-
 /**
  * Get headcount breakdown by department
  */
