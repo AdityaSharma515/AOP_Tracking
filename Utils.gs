@@ -75,7 +75,8 @@ function withLock(callback, timeout = 10000) {
     lock.waitLock(timeout);
     return callback();
   } catch (e) {
-    return buildResponse(false, "Could not acquire lock or operation failed", e.message);
+    Logger.log("withLock Exception: " + e.message + "\\n" + e.stack);
+    return buildResponse(false, "Operation failed: " + e.message, e.stack);
   } finally {
     lock.releaseLock();
   }
