@@ -33,12 +33,30 @@ function buildResponse(success, message, dataOrError = null) {
 }
 
 /**
+ * Helper to safely get the database spreadsheet
+ */
+function getDatabase() {
+  let id = CONFIG.DB_ID;
+  if (!id || id === "YOUR_SPREADSHEET_ID_HERE") {
+    return SpreadsheetApp.getActiveSpreadsheet();
+  }
+  
+  // If user pasted full URL, extract the ID
+  const match = id.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (match) id = match[1];
+  
+  try {
+    return SpreadsheetApp.openById(id);
+  } catch (e) {
+    throw new Error("Invalid Spreadsheet ID or URL provided in CONFIG.DB_ID");
+  }
+}
+
+/**
  * Get sheet object by name
  */
 function getSheet(sheetName) {
-  const ss = CONFIG.DB_ID !== "YOUR_SPREADSHEET_ID_HERE" ? 
-             SpreadsheetApp.openById(CONFIG.DB_ID) : 
-             SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getDatabase();
   return ss ? ss.getSheetByName(sheetName) : null;
 }
 
