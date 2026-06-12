@@ -1,0 +1,111 @@
+<script>
+/**
+ * js/login.html
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', login);
+    }
+    
+    const toggleBtn = document.getElementById('togglePassword');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', togglePassword);
+    }
+    
+    // Auto-fill remembered email
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail && document.getElementById('email')) {
+        document.getElementById('email').value = savedEmail;
+        document.getElementById('rememberMe').checked = true;
+    }
+});
+
+async function login(e) {
+    e.preventDefault();
+    if (!validateLoginForm()) return;
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const rememberMe = document.getElementById('rememberMe').checked;
+    
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const spinner = submitBtn.querySelector('.spinner-border');
+    
+    submitBtn.disabled = true;
+    if(spinner) spinner.classList.remove('d-none');
+    
+    try {
+        const res = await server.loginUser(email, password);
+        if (res.success) {
+            localStorage.setItem('sessionId', res.data.sessionId);
+            
+            if (rememberMe) {
+                rememberUser(email);
+            } else {
+                localStorage.removeItem('rememberedEmail');
+            }
+            
+            showSuccess('Login successful. Redirecting...');
+            
+            // Redirect logic based on role could be here, but defaulting to Dashboard
+            setTimeout(() => {
+                window.top.location.href = "<?= ScriptApp.getService().getUrl() ?>?page=Dashboard";
+            }, 1000);
+        } else {
+            showLoginError(res.message || 'Invalid credentials');
+        }
+    } catch (error) {
+        showLoginError('Network error. Please try again.');
+    } finally {
+        submitBtn.disabled = false;
+        if(spinner) spinner.classList.add('d-none');
+    }
+}
+
+function validateLoginForm() {
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    let isValid = true;
+    
+    if (!email.value || !email.value.includes('@')) {
+        email.classList.add('is-invalid');
+        isValid = false;
+    } else {
+        email.classList.remove('is-invalid');
+    }
+    
+    if (!password.value) {
+        password.classList.add('is-invalid');
+        isValid = false;
+    } else {
+        password.classList.remove('is-invalid');
+    }
+    
+    return isValid;
+}
+
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const icon = document.querySelector('#togglePassword i');
+    if (!passwordInput || !icon) return;
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+
+function rememberUser(email) {
+    localStorage.setItem('rememberedEmail', email);
+}
+
+function showLoginError(msg) {
+    showError(msg);
+}
+</script>

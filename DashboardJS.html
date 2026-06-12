@@ -1,0 +1,78 @@
+<script>
+/**
+ * js/dashboard.html
+ */
+let sessionData = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    sessionData = await validateSession();
+    if (sessionData) {
+        loadDashboard();
+    }
+});
+
+async function loadDashboard() {
+    showLoader();
+    try {
+        await Promise.all([
+            loadStatistics(),
+            loadDepartmentSummary(),
+            loadVacancySummary(),
+            loadAOPSummary()
+        ]);
+    } catch (e) {
+        showError("Failed to load dashboard data");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function loadStatistics() {
+    const res = await server.getDashboardStats(localStorage.getItem('sessionId'));
+    if (res.success) {
+        const stats = res.data;
+        const h2Elements = document.querySelectorAll('.card-body h2');
+        if (h2Elements.length >= 6) {
+            h2Elements[0].textContent = stats.totalEmployees;
+            h2Elements[1].textContent = stats.totalPositions;
+            h2Elements[2].textContent = stats.totalPositions - stats.vacantPositions;
+            h2Elements[3].textContent = stats.vacantPositions;
+            h2Elements[4].textContent = stats.departments;
+            h2Elements[5].textContent = stats.subDepartments;
+        }
+    }
+}
+
+async function loadDepartmentSummary() {
+    const res = await server.getVacancySummary(localStorage.getItem('sessionId'));
+    if (res.success) {
+        const tbody = document.querySelector('.table tbody');
+        if (tbody) {
+            tbody.innerHTML = '';
+            for (const [dept, data] of Object.entries(res.data)) {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${dept}</td>
+                        <td>${data.Total}</td>
+                        <td>${data.Occupied}</td>
+                        <td><span class="badge bg-${data.Vacant > 0 ? 'danger' : 'success'}">${data.Vacant}</span></td>
+                    </tr>
+                `;
+            }
+        }
+    }
+}
+
+async function loadVacancySummary() {
+    // Currently populated together with department summary in the same table.
+    // If there were charts, initialization logic goes here.
+}
+
+async function loadAOPSummary() {
+    // Logic for loading AOP specific widgets/charts goes here
+}
+
+function refreshDashboard() {
+    loadDashboard();
+}
+</script>

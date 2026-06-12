@@ -1,0 +1,134 @@
+<script>
+/**
+ * js/departments.html
+ */
+let allDepartments = [];
+let sessionRole = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const session = await validateSession();
+    if (session) {
+        sessionRole = session.role;
+        loadDepartments();
+    }
+});
+
+async function loadDepartments() {
+    showLoader();
+    try {
+        const res = await server.getDepartments(localStorage.getItem('sessionId'));
+        if (res.success) {
+            allDepartments = res.data;
+            populateDepartmentTable();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Failed to load departments");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function createDepartment(name) {
+    if(!name) return;
+    showLoader();
+    try {
+        const res = await server.createDepartment(localStorage.getItem('sessionId'), name);
+        if (res.success) {
+            showSuccess("Department created");
+            loadDepartments();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addDepartmentModal'));
+            if(modal) modal.hide();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Creation failed");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function updateDepartment(id, name) {
+    showLoader();
+    try {
+        const res = await server.updateDepartment(localStorage.getItem('sessionId'), id, name);
+        if (res.success) {
+            showSuccess("Department updated");
+            loadDepartments();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Update failed");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function deleteDepartment(id) {
+    if (!confirmDelete()) return;
+    showLoader();
+    try {
+        const res = await server.deleteDepartment(localStorage.getItem('sessionId'), id);
+        if (res.success) {
+            showSuccess("Department deleted");
+            loadDepartments();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Deletion failed");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function createSubDepartment(deptId, name) {
+    showLoader();
+    try {
+        const res = await server.createSubDepartment(localStorage.getItem('sessionId'), deptId, name);
+        if (res.success) {
+            showSuccess("Sub department created");
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addSubDepartmentModal'));
+            if(modal) modal.hide();
+        }
+        else showError(res.message);
+    } catch (e) {
+        showError("Failed to create sub department");
+    } finally {
+        hideLoader();
+    }
+}
+
+function loadSubDepartments() {
+    // API load sub depts
+}
+
+function editDepartment(id) {
+    // Trigger modal for edit
+}
+
+function populateDepartmentTable() {
+    const tbody = document.querySelector('.table tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    allDepartments.forEach(dept => {
+        const canDelete = sessionRole === 'Admin';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-4 fw-semibold">${dept.DepartmentID}</td>
+            <td>${dept.DepartmentName}</td>
+            <td class="pe-4 text-end">
+                <button class="btn btn-sm btn-light me-1" onclick="editDepartment('${dept.DepartmentID}')"><i class="bi bi-pencil"></i></button>
+                ${canDelete ? `<button class="btn btn-sm btn-light text-danger" onclick="deleteDepartment('${dept.DepartmentID}')"><i class="bi bi-trash"></i></button>` : ''}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+</script>

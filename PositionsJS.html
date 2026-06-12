@@ -1,0 +1,210 @@
+<script>
+/**
+ * js/positions.html
+ */
+let allPositions = [];
+let filteredPositions = [];
+let currentPosPage = 1;
+let posRowsPerPage = 10;
+let sessionRole = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const session = await validateSession();
+    if (session) {
+        sessionRole = session.role;
+        setupPosEventListeners();
+        loadPositions();
+    }
+});
+
+function setupPosEventListeners() {
+    const searchInput = document.querySelector('input[placeholder="Search positions..."]');
+    if(searchInput) searchInput.addEventListener('input', debounce(searchPositions, 300));
+    
+    const filters = document.querySelectorAll('.form-select');
+    filters.forEach(f => f.addEventListener('change', filterPositions));
+}
+
+async function loadPositions() {
+    showLoader();
+    try {
+        const res = await server.getPositions(localStorage.getItem('sessionId'));
+        if (res.success) {
+            allPositions = res.data;
+            filteredPositions = [...allPositions];
+            populatePositionTable();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Failed to load positions");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function createPosition(data) {
+    if(!validatePositionForm(data)) return;
+    
+    showLoader();
+    try {
+        const res = await server.createPosition(localStorage.getItem('sessionId'), data);
+        if (res.success) {
+            showSuccess("Position created");
+            loadPositions();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addPositionModal'));
+            if(modal) modal.hide();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Creation failed");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function updatePosition(id, data) {
+    showLoader();
+    try {
+        const res = await server.updatePosition(localStorage.getItem('sessionId'), id, data);
+        if (res.success) {
+            showSuccess("Position updated");
+            loadPositions();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Update failed");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function deletePosition(id) {
+    if (!confirmDelete("Delete this position? Cannot be undone if no direct reports exist.")) return;
+    showLoader();
+    try {
+        const res = await server.deletePosition(localStorage.getItem('sessionId'), id);
+        if (res.success) {
+            showSuccess("Position deleted");
+            loadPositions();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Deletion failed");
+    } finally {
+        hideLoader();
+    }
+}
+
+function viewPosition(id) {
+    const pos = allPositions.find(p => p.PositionID === id);
+    if(pos) {
+        // Modal popup logic
+    }
+}
+
+function searchPositions(e) {
+    const term = e.target.value.toLowerCase();
+    applyPosFilters(term);
+}
+
+function filterPositions() {
+    const term = document.querySelector('input[placeholder="Search positions..."]')?.value.toLowerCase() || '';
+    applyPosFilters(term);
+}
+
+function applyPosFilters(searchTerm) {
+    const selects = document.querySelectorAll('.card-body .form-select');
+    const deptFilter = selects[0]?.value;
+
+    filteredPositions = allPositions.filter(pos => {
+        let match = true;
+        if(searchTerm) {
+            match = match && (
+                (pos.PositionID && pos.PositionID.toLowerCase().includes(searchTerm)) ||
+                (pos.PositionTitle && pos.PositionTitle.toLowerCase().includes(searchTerm))
+            );
+        }
+        if (deptFilter && deptFilter !== 'All Departments') {
+            match = match && pos.Department === deptFilter;
+        }
+        return match;
+    });
+
+    currentPosPage = 1;
+    populatePositionTable();
+}
+
+function validatePositionForm(data) {
+    if(!data.PositionTitle || !data.Department) {
+        showError("Position Title and Department are required");
+        return false;
+    }
+    return true;
+}
+
+function populatePositionTable() {
+    const tbody = document.querySelector('.table tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    const pageData = paginateTable(filteredPositions, currentPosPage, posRowsPerPage);
+    
+    pageData.data.forEach(pos => {
+        const canDelete = sessionRole === 'Admin';
+        const isVacant = pos.Status === 'Vacant';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-4 fw-semibold">${pos.PositionID}</td>
+            <td>${pos.PositionTitle}</td>
+            <td>${pos.Department}</td>
+            <td>${pos.SubDepartment || '-'}</td>
+            <td>${pos.ReportsToPositionID || '-'}</td>
+            <td><span class="badge bg-${isVacant ? 'danger' : 'success'}">${pos.Status}</span></td>
+            <td class="pe-4 text-end">
+                <button class="btn btn-sm btn-light me-1" title="Edit" onclick="viewPosition('${pos.PositionID}')"><i class="bi bi-pencil"></i></button>
+                ${canDelete ? `<button class="btn btn-sm btn-light text-danger" title="Delete" onclick="deletePosition('${pos.PositionID}')"><i class="bi bi-trash"></i></button>` : ''}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    // Call common pagination if ul exists
+    const ul = document.querySelector('.pagination');
+    if(ul) paginationPos(pageData, ul);
+}
+
+function paginationPos(pageData, ul) {
+    ul.innerHTML = '';
+    
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${pageData.currentPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePosPage(${pageData.currentPage - 1}, event)">Previous</a>`;
+    ul.appendChild(prevLi);
+    
+    for(let i = 1; i <= pageData.totalPages; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${pageData.currentPage === i ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#" onclick="changePosPage(${i}, event)">${i}</a>`;
+        ul.appendChild(li);
+    }
+    
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${pageData.currentPage === pageData.totalPages || pageData.totalPages === 0 ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePosPage(${pageData.currentPage + 1}, event)">Next</a>`;
+    ul.appendChild(nextLi);
+}
+
+function changePosPage(page, e) {
+    if(e) e.preventDefault();
+    const totalPages = Math.ceil(filteredPositions.length / posRowsPerPage);
+    if(page >= 1 && page <= totalPages) {
+        currentPosPage = page;
+        populatePositionTable();
+    }
+}
+</script>

@@ -1,0 +1,161 @@
+<script>
+/**
+ * js/reports.html
+ */
+let sessionRole = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const session = await validateSession();
+    if (session) {
+        sessionRole = session.role;
+        loadReports();
+    }
+});
+
+function loadReports() {
+    // Hide buttons if restricted
+    if(sessionRole === 'Assistant Manager' || sessionRole === 'Manager') {
+        const downloadBtns = document.querySelectorAll('.btn-outline-success, .btn-outline-danger');
+        downloadBtns.forEach(b => b.style.display = 'none');
+    }
+    
+    // Attach click events to generate, excel, pdf buttons based on their parent block
+    const cards = document.querySelectorAll('.card-body');
+    if(cards.length >= 4) {
+        setupReportCard(cards[0], 'employee');
+        setupReportCard(cards[1], 'department');
+        setupReportCard(cards[2], 'vacancy');
+        setupReportCard(cards[3], 'aop');
+    }
+}
+
+function setupReportCard(cardNode, type) {
+    const btns = cardNode.querySelectorAll('button');
+    if (btns.length >= 3) {
+        btns[0].addEventListener('click', () => { showSuccess('Report generation initiated. Please export to view.'); });
+        btns[1].addEventListener('click', () => exportExcel(type));
+        btns[2].addEventListener('click', () => exportPDF(type));
+    }
+}
+
+async function generateEmployeeReport() {
+    showLoader();
+    try {
+        const res = await server.getEmployees(localStorage.getItem('sessionId'));
+        if (res.success) {
+            return res.data.map(e => ({
+                'Employee Code': e.EmployeeCode,
+                'Employee Name': e.EmployeeName,
+                'Designation': e.Designation,
+                'Department': e.Department,
+                'Sub Department': e.SubDepartment,
+                'Position': e.PositionID,
+                'Status': e.Status
+            }));
+        }
+    } catch(e) {
+        showError("Failed to generate employee report");
+    } finally {
+        hideLoader();
+    }
+    return null;
+}
+
+async function generateDepartmentReport() {
+    showLoader();
+    try {
+        const res = await server.getVacancySummary(localStorage.getItem('sessionId'));
+        if (res.success) {
+            return Object.entries(res.data).map(([dept, counts]) => ({
+                'Department': dept,
+                'Total HC': counts.Total,
+                'Actual HC': counts.Occupied,
+                'Vacancies': counts.Vacant,
+                'Fulfillment %': ((counts.Occupied / (counts.Total || 1)) * 100).toFixed(2) + '%'
+            }));
+        }
+    } catch(e) {
+        showError("Error generating dept report");
+    } finally {
+        hideLoader();
+    }
+    return null;
+}
+
+async function generateVacancyReport() {
+    showLoader();
+    try {
+        const res = await server.getPositions(localStorage.getItem('sessionId'));
+        if (res.success) {
+            return res.data.filter(p => p.Status === 'Vacant').map(p => ({
+                'Position': p.PositionTitle,
+                'Department': p.Department,
+                'Sub Department': p.SubDepartment,
+                'Reports To': p.ReportsToPositionID,
+                'Status': p.Status
+            }));
+        }
+    } catch(e) {
+        showError("Error generating vacancy report");
+    } finally {
+        hideLoader();
+    }
+    return null;
+}
+
+async function generateAOPReport() {
+    showLoader();
+    try {
+        const res = await server.getAOPSummary(localStorage.getItem('sessionId'));
+        if (res.success) {
+            return res.data.map(row => ({
+                'Department': row.Department,
+                'Planned HC': row.Planned,
+                'Actual HC': row.Actual,
+                'Variance': row.Variance,
+                'Fulfillment %': ((row.Actual / (row.Planned || 1)) * 100).toFixed(2) + '%'
+            }));
+        }
+    } catch(e) {
+        showError("Error generating AOP report");
+    } finally {
+        hideLoader();
+    }
+    return null;
+}
+
+async function exportExcel(type) {
+    let data = null;
+    let filename = '';
+    
+    if (type === 'employee') { data = await generateEmployeeReport(); filename = 'Employees'; }
+    else if (type === 'department') { data = await generateDepartmentReport(); filename = 'Departments'; }
+    else if (type === 'vacancy') { data = await generateVacancyReport(); filename = 'Vacancies'; }
+    else if (type === 'aop') { data = await generateAOPReport(); filename = 'AOP_Report'; }
+    
+    if (data && data.length > 0) {
+        exportToExcel(data, filename);
+    } else {
+        showError("No data available to export");
+    }
+}
+
+async function exportPDF(type) {
+    let data = null;
+    let filename = '';
+    let title = '';
+    
+    if (type === 'employee') { data = await generateEmployeeReport(); filename = 'Employees'; title = 'Employee Report'; }
+    else if (type === 'department') { data = await generateDepartmentReport(); filename = 'Departments'; title = 'Department Report'; }
+    else if (type === 'vacancy') { data = await generateVacancyReport(); filename = 'Vacancies'; title = 'Vacancy Report'; }
+    else if (type === 'aop') { data = await generateAOPReport(); filename = 'AOP'; title = 'AOP Fulfillment Report'; }
+    
+    if (data && data.length > 0) {
+        const headers = Object.keys(data[0]);
+        const rows = data.map(obj => Object.values(obj));
+        downloadPDF(headers, rows, title, filename);
+    } else {
+        showError("No data available to export");
+    }
+}
+</script>

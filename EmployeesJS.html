@@ -1,0 +1,263 @@
+<script>
+/**
+ * js/employees.html
+ */
+let allEmployees = [];
+let filteredEmployees = [];
+let currentPage = 1;
+let rowsPerPage = 10;
+let sessionRole = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const session = await validateSession();
+    if (session) {
+        sessionRole = session.role;
+        setupEventListeners();
+        loadEmployees();
+        loadDepartments();
+        loadPositions();
+    }
+});
+
+function setupEventListeners() {
+    const searchInput = document.querySelector('input[placeholder="Search employees..."]');
+    if(searchInput) searchInput.addEventListener('input', debounce(searchEmployees, 300));
+    
+    const filters = document.querySelectorAll('.form-select');
+    filters.forEach(f => f.addEventListener('change', filterEmployees));
+}
+
+async function loadEmployees() {
+    showLoader();
+    try {
+        const res = await server.getEmployees(localStorage.getItem('sessionId'));
+        if (res.success) {
+            allEmployees = res.data;
+            filteredEmployees = [...allEmployees];
+            populateEmployeeTable();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Failed to load employees");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function createEmployee(data) {
+    if (!validateEmployeeForm(data)) return;
+    
+    showLoader();
+    try {
+        const res = await server.createEmployee(localStorage.getItem('sessionId'), data);
+        if (res.success) {
+            showSuccess("Employee created");
+            loadEmployees();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addEmployeeModal'));
+            if(modal) modal.hide();
+            document.querySelector('#addEmployeeModal form').reset();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Creation failed");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function updateEmployee(code, data) {
+    showLoader();
+    try {
+        const res = await server.updateEmployee(localStorage.getItem('sessionId'), code, data);
+        if (res.success) {
+            showSuccess("Employee updated");
+            loadEmployees();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Update failed");
+    } finally {
+        hideLoader();
+    }
+}
+
+async function deleteEmployee(code) {
+    if (!confirmDelete()) return;
+    showLoader();
+    try {
+        const res = await server.deleteEmployee(localStorage.getItem('sessionId'), code);
+        if (res.success) {
+            showSuccess("Employee deleted");
+            loadEmployees();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Deletion failed");
+    } finally {
+        hideLoader();
+    }
+}
+
+function viewEmployee(code) {
+    const emp = allEmployees.find(e => e.EmployeeCode === code);
+    if(emp) {
+        // Integrate modal view data binding here
+    }
+}
+
+function searchEmployees(e) {
+    const term = e.target.value.toLowerCase();
+    applyFilters(term);
+}
+
+function filterEmployees() {
+    const term = document.querySelector('input[placeholder="Search employees..."]').value.toLowerCase();
+    applyFilters(term);
+}
+
+function applyFilters(searchTerm) {
+    const selects = document.querySelectorAll('.card-body .form-select');
+    const deptFilter = selects[0]?.value;
+    const desigFilter = selects[1]?.value;
+    const statusFilter = selects[2]?.value;
+
+    filteredEmployees = allEmployees.filter(emp => {
+        let match = true;
+        
+        if (searchTerm) {
+            match = match && (
+                (emp.EmployeeCode && emp.EmployeeCode.toLowerCase().includes(searchTerm)) ||
+                (emp.EmployeeName && emp.EmployeeName.toLowerCase().includes(searchTerm)) ||
+                (emp.Designation && emp.Designation.toLowerCase().includes(searchTerm))
+            );
+        }
+        
+        if (deptFilter && deptFilter !== 'All Departments') match = match && emp.Department === deptFilter;
+        if (desigFilter && desigFilter !== 'All Designations') match = match && emp.Designation === desigFilter;
+        if (statusFilter && statusFilter !== 'All Statuses') match = match && emp.Status === statusFilter;
+        
+        return match;
+    });
+
+    currentPage = 1;
+    populateEmployeeTable();
+}
+
+function resetFilters() {
+    document.querySelector('input[placeholder="Search employees..."]').value = '';
+    const selects = document.querySelectorAll('.card-body .form-select');
+    selects.forEach(s => s.selectedIndex = 0);
+    
+    filteredEmployees = [...allEmployees];
+    currentPage = 1;
+    populateEmployeeTable();
+}
+
+function populateEmployeeTable() {
+    const tbody = document.querySelector('.table tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    const pageData = paginateTable(filteredEmployees, currentPage, rowsPerPage);
+    
+    pageData.data.forEach(emp => {
+        const tr = document.createElement('tr');
+        const canDelete = ['Admin'].includes(sessionRole);
+        const canEdit = ['Admin', 'Plant Head', 'AGM', 'Sr Manager'].includes(sessionRole);
+        
+        tr.innerHTML = `
+            <td class="ps-4 fw-semibold">${emp.EmployeeCode}</td>
+            <td>
+                <div class="d-flex align-items-center">
+                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(emp.EmployeeName)}&background=random" class="rounded-circle me-2" width="32" height="32">
+                    <span>${emp.EmployeeName}</span>
+                </div>
+            </td>
+            <td>${emp.Designation}</td>
+            <td>${emp.Department}</td>
+            <td>${emp.SubDepartment || '-'}</td>
+            <td>${emp.PositionID || '-'}</td>
+            <td><span class="badge bg-${emp.Status === 'Active' ? 'success' : 'secondary'}">${emp.Status}</span></td>
+            <td class="pe-4 text-end">
+                <button class="btn btn-sm btn-light me-1" title="View" onclick="viewEmployee('${emp.EmployeeCode}')"><i class="bi bi-eye"></i></button>
+                ${canEdit ? `<button class="btn btn-sm btn-light me-1" title="Edit" onclick="viewEmployee('${emp.EmployeeCode}')"><i class="bi bi-pencil"></i></button>` : ''}
+                ${canDelete ? `<button class="btn btn-sm btn-light text-danger" title="Delete" onclick="deleteEmployee('${emp.EmployeeCode}')"><i class="bi bi-trash"></i></button>` : ''}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    pagination(pageData);
+}
+
+function pagination(pageData) {
+    const ul = document.querySelector('.pagination');
+    if (!ul) return;
+    
+    ul.innerHTML = '';
+    
+    // Prev
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${pageData.currentPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pageData.currentPage - 1}, event)">Previous</a>`;
+    ul.appendChild(prevLi);
+    
+    // Pages
+    for(let i = 1; i <= pageData.totalPages; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${pageData.currentPage === i ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i}, event)">${i}</a>`;
+        ul.appendChild(li);
+    }
+    
+    // Next
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${pageData.currentPage === pageData.totalPages || pageData.totalPages === 0 ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pageData.currentPage + 1}, event)">Next</a>`;
+    ul.appendChild(nextLi);
+}
+
+function changePage(page, e) {
+    if(e) e.preventDefault();
+    const totalPages = Math.ceil(filteredEmployees.length / rowsPerPage);
+    if(page >= 1 && page <= totalPages) {
+        currentPage = page;
+        populateEmployeeTable();
+    }
+}
+
+async function loadDepartments() {
+    try {
+        const res = await server.getDepartments(localStorage.getItem('sessionId'));
+        if(res.success) {
+            // Populate department dropdowns in filters and modals
+        }
+    } catch(e){}
+}
+
+async function loadPositions() {
+    try {
+        const res = await server.getPositions(localStorage.getItem('sessionId'));
+        if(res.success) {
+            // Populate position dropdowns in modal
+        }
+    } catch(e){}
+}
+
+function validateEmployeeForm(data) {
+    if(!data.EmployeeCode || !data.EmployeeName) {
+        showError("Employee Code and Name are required.");
+        return false;
+    }
+    return true;
+}
+
+// Attach export handler if export button exists
+function exportEmployeeData() {
+    exportToExcel(filteredEmployees, "Employees_Export");
+}
+</script>

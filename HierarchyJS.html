@@ -1,0 +1,188 @@
+<script src="https://balkan.app/js/OrgChart.js"></script>
+<script>
+/**
+ * js/hierarchy.html
+ */
+let chart = null;
+let positionsData = [];
+let employeesData = [];
+let sessionRole = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const session = await validateSession();
+    if (session) {
+        sessionRole = session.role;
+        loadHierarchy();
+        setupHierarchyEvents();
+    }
+});
+
+function setupHierarchyEvents() {
+    const searchEmp = document.querySelector('input[placeholder="Search Employee..."]');
+    if(searchEmp) searchEmp.addEventListener('input', debounce((e) => searchHierarchy(e.target.value, 'employee'), 300));
+    
+    const searchPos = document.querySelector('input[placeholder="Search Position..."]');
+    if(searchPos) searchPos.addEventListener('input', debounce((e) => searchHierarchy(e.target.value, 'position'), 300));
+    
+    const buttons = document.querySelectorAll('.card-body .btn');
+    if(buttons.length >= 2) {
+        buttons[0].addEventListener('click', expandAll);
+        buttons[1].addEventListener('click', collapseAll);
+    }
+    
+    // Hide download for restricted roles
+    if(sessionRole === 'Assistant Manager' || sessionRole === 'Manager') {
+        const downloadBtns = document.querySelectorAll('.d-flex > div > button');
+        downloadBtns.forEach(b => b.style.display = 'none');
+    } else {
+        const downloadBtns = document.querySelectorAll('.d-flex > div > button');
+        if(downloadBtns.length >= 2) {
+            downloadBtns[0].addEventListener('click', downloadHierarchyPNG);
+            downloadBtns[1].addEventListener('click', downloadHierarchyPDF);
+        }
+    }
+}
+
+async function loadHierarchy() {
+    showLoader();
+    try {
+        const [posRes, empRes] = await Promise.all([
+            server.getPositions(localStorage.getItem('sessionId')),
+            server.getEmployees(localStorage.getItem('sessionId'))
+        ]);
+        
+        if (posRes.success && empRes.success) {
+            positionsData = posRes.data;
+            employeesData = empRes.data;
+            buildTree();
+        }
+    } catch (e) {
+        showError("Failed to load hierarchy data");
+    } finally {
+        hideLoader();
+    }
+}
+
+function buildTree() {
+    const nodes = positionsData.map(pos => {
+        const emp = employeesData.find(e => e.PositionID === pos.PositionID && e.Status === 'Active');
+        
+        const isVacant = !emp || pos.Status === 'Vacant';
+        const name = emp ? emp.EmployeeName : 'VACANT';
+        const title = pos.PositionTitle;
+        const dept = pos.Department || 'N/A';
+        const subDept = pos.SubDepartment || '';
+        
+        let tags = [isVacant ? 'vacant' : 'occupied'];
+        if (title.toLowerCase().includes('plant head')) tags.push('plantHead');
+        else if (title.toLowerCase().includes('head') || title.toLowerCase().includes('agm')) tags.push('deptHead');
+        
+        return {
+            id: pos.PositionID,
+            pid: pos.ReportsToPositionID || null,
+            name: name,
+            title: title,
+            department: dept,
+            subDept: subDept,
+            status: isVacant ? 'Vacant' : 'Occupied',
+            tags: tags,
+            img: emp ? `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random` : 'https://ui-avatars.com/api/?name=V&background=f0ad4e'
+        };
+    });
+    
+    renderHierarchy(nodes);
+}
+
+function renderHierarchy(nodes) {
+    const container = document.querySelector('.hierarchy-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    chart = new OrgChart(container, {
+        nodes: nodes,
+        nodeBinding: {
+            field_0: "name",
+            field_1: "title",
+            field_2: "department",
+            img_0: "img"
+        },
+        tags: {
+            "vacant": {
+                template: "ana" // Or a custom template with red border
+            },
+            "occupied": {
+                template: "ula"
+            },
+            "plantHead": {
+                template: "rony"
+            },
+            "deptHead": {
+                template: "belinda"
+            }
+        },
+        enableSearch: false,
+        zoom: {
+            speed: 120,
+            smooth: 10
+        }
+    });
+    
+    chart.on('click', function(sender, args){
+        showNodeDetails(args.node.id);
+        return false;
+    });
+}
+
+function expandAll() {
+    if(chart) chart.expandAll();
+}
+
+function collapseAll() {
+    if(chart) chart.collapseAll();
+}
+
+function searchHierarchy(term, type) {
+    if (!chart || !term) return;
+    // Find node
+    const targetNode = chart.config.nodes.find(n => {
+        if (type === 'employee' && n.name.toLowerCase().includes(term.toLowerCase())) return true;
+        if (type === 'position' && (n.title.toLowerCase().includes(term.toLowerCase()) || n.id.toLowerCase().includes(term.toLowerCase()))) return true;
+        return false;
+    });
+    
+    if (targetNode) {
+        focusNode(targetNode.id);
+        highlightNode(targetNode.id);
+    }
+}
+
+function focusNode(id) {
+    if(chart) chart.center(id);
+}
+
+function highlightNode(id) {
+    // OrgChart handles this visually when searched or focused, 
+    // Can inject custom CSS to the node SVG.
+}
+
+function showNodeDetails(id) {
+    // Show a modal or side panel with full node details
+    const node = chart.config.nodes.find(n => n.id === id);
+    if(node) {
+        showSuccess(`Viewing details for ${node.name} (${node.title})`);
+    }
+}
+
+function refreshHierarchy() {
+    loadHierarchy();
+}
+
+function downloadHierarchyPNG() {
+    downloadPNG('hierarchy-container', 'Organization_Hierarchy');
+}
+
+function downloadHierarchyPDF() {
+    if(chart) chart.exportPDF({filename: "Hierarchy.pdf", expandChildren: true});
+}
+</script>

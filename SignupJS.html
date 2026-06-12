@@ -1,0 +1,112 @@
+<script>
+/**
+ * js/signup.html
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form');
+    if (form) form.addEventListener('submit', registerUser);
+    
+    const toggleBtn1 = document.getElementById('togglePassword');
+    const toggleBtn2 = document.getElementById('toggleConfirmPassword');
+    
+    if (toggleBtn1) toggleBtn1.addEventListener('click', () => togglePassword('password', 'togglePassword'));
+    if (toggleBtn2) toggleBtn2.addEventListener('click', () => togglePassword('confirmPassword', 'toggleConfirmPassword'));
+    
+    const pwInput = document.getElementById('password');
+    if (pwInput) pwInput.addEventListener('input', checkPasswordStrength);
+});
+
+async function registerUser(e) {
+    e.preventDefault();
+    if (!validateSignupForm()) return;
+    
+    const fullName = document.getElementById('fullName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const role = document.getElementById('role').value;
+    const password = document.getElementById('password').value;
+    
+    const submitBtn = document.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    showLoader();
+    
+    try {
+        const res = await server.registerUser(fullName, email, password, role, null);
+        if (res.success) {
+            showSuccess('Account created successfully. Please login.');
+            setTimeout(() => {
+                window.top.location.href = "<?= ScriptApp.getService().getUrl() ?>?page=Login";
+            }, 1500);
+        } else {
+            showError(res.message);
+            submitBtn.disabled = false;
+        }
+    } catch (error) {
+        showError('Registration failed. Please try again.');
+        submitBtn.disabled = false;
+    } finally {
+        hideLoader();
+    }
+}
+
+function validatePassword(pw) {
+    const minLen = pw.length >= 8;
+    const hasUpper = /[A-Z]/.test(pw);
+    const hasLower = /[a-z]/.test(pw);
+    const hasNum = /\d/.test(pw);
+    const hasSpec = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw);
+    return minLen && hasUpper && hasLower && hasNum && hasSpec;
+}
+
+function checkPasswordStrength(e) {
+    const pw = e.target.value;
+    const items = document.querySelectorAll('ul.ps-3 li');
+    if (items.length < 5) return;
+    
+    items[0].className = pw.length >= 8 ? 'text-success' : 'text-danger';
+    items[1].className = /[A-Z]/.test(pw) ? 'text-success' : 'text-danger';
+    items[2].className = /[a-z]/.test(pw) ? 'text-success' : 'text-danger';
+    items[3].className = /\d/.test(pw) ? 'text-success' : 'text-danger';
+    items[4].className = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw) ? 'text-success' : 'text-danger';
+}
+
+function togglePassword(inputId, btnId) {
+    const input = document.getElementById(inputId);
+    const icon = document.querySelector(`#${btnId} i`);
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+
+function validateSignupForm() {
+    const fullName = document.getElementById('fullName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const role = document.getElementById('role').value;
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (!fullName || !email || !role || !password || !confirmPassword) {
+        showError("All fields are required.");
+        return false;
+    }
+    
+    if (!validatePassword(password)) {
+        showError("Password does not meet requirements.");
+        return false;
+    }
+    
+    if (password !== confirmPassword) {
+        showError("Passwords do not match.");
+        return false;
+    }
+    
+    return true;
+}
+</script>
