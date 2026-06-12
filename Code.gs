@@ -4,7 +4,13 @@
  * Automatically creates all required sheets if they do not exist.
  */
 function initializeDatabase() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = CONFIG.DB_ID !== "YOUR_SPREADSHEET_ID_HERE" ? 
+             SpreadsheetApp.openById(CONFIG.DB_ID) : 
+             SpreadsheetApp.getActiveSpreadsheet();
+             
+  if (!ss) {
+    return buildResponse(false, "No active spreadsheet found. Please add your Sheet ID to CONFIG.DB_ID in Utils.gs");
+  }
 
   const sheetDefinitions = {
     [CONFIG.SHEETS.USERS]: [

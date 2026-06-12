@@ -1,6 +1,7 @@
 // Utils.gs
 
 const CONFIG = {
+  DB_ID: "YOUR_SPREADSHEET_ID_HERE", // Replace with your Google Sheet ID
   SHEETS: {
     USERS: "USERS",
     POSITIONS: "POSITIONS",
@@ -35,8 +36,10 @@ function buildResponse(success, message, dataOrError = null) {
  * Get sheet object by name
  */
 function getSheet(sheetName) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName(sheetName);
+  const ss = CONFIG.DB_ID !== "YOUR_SPREADSHEET_ID_HERE" ? 
+             SpreadsheetApp.openById(CONFIG.DB_ID) : 
+             SpreadsheetApp.getActiveSpreadsheet();
+  return ss ? ss.getSheetByName(sheetName) : null;
 }
 
 /**
