@@ -32,10 +32,19 @@ async function registerUser(e) {
     try {
         const res = await server.registerUser(fullName, email, password, role, null);
         if (res.success) {
-            showSuccess('Account created successfully. Please login.');
-            setTimeout(() => {
-                window.top.location.href = "<?= ScriptApp.getService().getUrl() ?>?page=Login";
-            }, 1500);
+            showSuccess('Account created successfully. Logging you in...');
+            const loginRes = await server.loginUser(email, password);
+            if (loginRes && loginRes.success) {
+                localStorage.setItem('sessionId', loginRes.data.sessionId);
+                setTimeout(() => {
+                    window.top.location.href = "<?= ScriptApp.getService().getUrl() ?>?page=Dashboard";
+                }, 1000);
+            } else {
+                showError('Auto-login failed. Please login manually.');
+                setTimeout(() => {
+                    window.top.location.href = "<?= ScriptApp.getService().getUrl() ?>?page=Login";
+                }, 1500);
+            }
         } else {
             showError(res.message);
             submitBtn.disabled = false;
