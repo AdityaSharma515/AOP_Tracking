@@ -95,3 +95,40 @@ function createSubDepartment(sessionId, deptId, subDeptName) {
     return buildResponse(true, "SubDepartment created", { SubDepartmentID: subId });
   });
 }
+
+/**
+ * Get all sub-departments
+ */
+function getSubDepartments(sessionId) {
+  const auth = validateSession(sessionId);
+  if (!auth.success) return auth;
+
+  const sheet = getSheet(CONFIG.SHEETS.SUBDEPARTMENTS);
+  if (!sheet) return buildResponse(true, "No sub-departments", []);
+  
+  const subDepts = getRowsAsObjects(sheet);
+  subDepts.forEach(d => delete d._rowIndex);
+  
+  return buildResponse(true, "SubDepartments retrieved", subDepts);
+}
+
+/**
+ * Delete sub-department
+ */
+function deleteSubDepartment(sessionId, subDeptId) {
+  const auth = hasPermission(sessionId, [CONFIG.ROLES.ADMIN]);
+  if (!auth.success) return auth;
+
+  return withLock(() => {
+    const sheet = getSheet(CONFIG.SHEETS.SUBDEPARTMENTS);
+    const subDepts = getRowsAsObjects(sheet);
+    const subDept = subDepts.find(d => d.SubDepartmentID === subDeptId);
+    
+    if (!subDept) return buildResponse(false, "Sub-department not found");
+
+    sheet.deleteRow(subDept._rowIndex);
+    logAudit(auth.data.email, "Delete", "SubDepartment", subDeptId, JSON.stringify(subDept), "");
+    
+    return buildResponse(true, "Sub-department deleted");
+  });
+}

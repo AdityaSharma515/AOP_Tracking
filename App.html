@@ -19,7 +19,7 @@
     <div id="loader-placeholder"></div>
 
     <!-- Login/Signup Container (No Navbar/Sidebar) -->
-    <div id="auth-container">
+    <div id="auth-container" class="d-none">
         <div id="view-Login" class="page-view active"><?!= include('LoginView'); ?></div>
         <div id="view-Signup" class="page-view"><?!= include('SignupView'); ?></div>
     </div>
@@ -57,6 +57,7 @@
     <script>
         // Init SPA Router on load
         document.addEventListener('DOMContentLoaded', async () => {
+            showLoader();
             const urlParams = new URLSearchParams(window.location.search);
             const initialPage = urlParams.get('page') || 'Login';
             
@@ -76,6 +77,7 @@
             } else {
                 navigateTo(initialPage === 'Signup' ? 'Signup' : 'Login');
             }
+            hideLoader();
         });
     </script>
 </body>

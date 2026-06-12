@@ -3,6 +3,7 @@
  * js/departments.html
  */
 let allDepartments = [];
+let allSubDepartments = [];
 let sessionRole = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -16,13 +17,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadDepartments() {
     showLoader();
     try {
-        const res = await server.getDepartments(localStorage.getItem('sessionId'));
-        if (res.success) {
-            allDepartments = res.data;
+        const [deptRes, subDeptRes] = await Promise.all([
+            server.getDepartments(localStorage.getItem('sessionId')),
+            server.getSubDepartments(localStorage.getItem('sessionId'))
+        ]);
+        
+        if (deptRes.success) {
+            allDepartments = deptRes.data;
+            allSubDepartments = subDeptRes.success ? subDeptRes.data : [];
             populateDepartmentTable();
             populateDepartmentDropdowns();
         } else {
-            showError(res.message);
+            showError(deptRes.message);
         }
     } catch (e) {
         showError("Failed to load departments");
@@ -92,6 +98,7 @@ async function createSubDepartment(deptId, name) {
         const res = await server.createSubDepartment(localStorage.getItem('sessionId'), deptId, name);
         if (res.success) {
             showSuccess("Sub department created");
+            loadDepartments();
             const modal = bootstrap.Modal.getInstance(document.getElementById('addSubDepartmentModal'));
             if(modal) modal.hide();
         }
@@ -103,8 +110,22 @@ async function createSubDepartment(deptId, name) {
     }
 }
 
-function loadSubDepartments() {
-    // API load sub depts
+async function deleteSubDepartment(id) {
+    if (!confirmDelete()) return;
+    showLoader();
+    try {
+        const res = await server.deleteSubDepartment(localStorage.getItem('sessionId'), id);
+        if (res.success) {
+            showSuccess("Sub department deleted");
+            loadDepartments();
+        } else {
+            showError(res.message);
+        }
+    } catch (e) {
+        showError("Deletion failed");
+    } finally {
+        hideLoader();
+    }
 }
 
 function editDepartment(id) {
@@ -112,7 +133,7 @@ function editDepartment(id) {
 }
 
 function populateDepartmentTable() {
-    const tbody = document.querySelector('.table tbody');
+    const tbody = document.getElementById('departmentsTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = '';
@@ -121,16 +142,41 @@ function populateDepartmentTable() {
         const canDelete = sessionRole === 'Admin';
         
         const tr = document.createElement('tr');
+        tr.className = 'table-light';
         tr.innerHTML = `
-            <td class="ps-4 fw-semibold">${dept.DepartmentID}</td>
-            <td>${dept.DepartmentName}</td>
+            <td class="ps-4 fw-bold">${dept.DepartmentID}</td>
+            <td class="fw-bold">${dept.DepartmentName}</td>
             <td class="pe-4 text-end">
                 <button class="btn btn-sm btn-light me-1" onclick="editDepartment('${dept.DepartmentID}')"><i class="bi bi-pencil"></i></button>
                 ${canDelete ? `<button class="btn btn-sm btn-light text-danger" onclick="deleteDepartment('${dept.DepartmentID}')"><i class="bi bi-trash"></i></button>` : ''}
             </td>
         `;
         tbody.appendChild(tr);
+
+        // Sub Departments Rows
+        const subDepts = allSubDepartments.filter(sub => sub.DepartmentID === dept.DepartmentID);
+        if (subDepts.length > 0) {
+            subDepts.forEach(sub => {
+                const subTr = document.createElement('tr');
+                subTr.innerHTML = `
+                    <td class="ps-5 text-muted">${sub.SubDepartmentID}</td>
+                    <td class="ps-4 text-muted"><i class="bi bi-arrow-return-right me-2"></i> ${sub.SubDepartmentName}</td>
+                    <td class="pe-4 text-end">
+                        ${canDelete ? `<button class="btn btn-sm btn-light text-danger" onclick="deleteSubDepartment('${sub.SubDepartmentID}')"><i class="bi bi-trash"></i></button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(subTr);
+            });
+        } else {
+            const emptyTr = document.createElement('tr');
+            emptyTr.innerHTML = `<td colspan="3" class="text-muted ps-5 small fst-italic">No sub-departments</td>`;
+            tbody.appendChild(emptyTr);
+        }
     });
+
+    if (allDepartments.length === 0) {
+         tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">No departments found</td></tr>`;
+    }
 }
 
 function handleAddDepartment() {
