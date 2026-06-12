@@ -1,6 +1,50 @@
 // Code.gs
 
 /**
+ * STANDALONE SETUP: Run this directly in Apps Script editor.
+ * Does NOT depend on Utils.gs or getDatabase().
+ * Paste your Google Sheet ID below and run this function.
+ */
+function setupDatabase() {
+  var SHEET_ID = "1YSwIsej5hXiIv9Hz3Rj7rf8fls_u_x4vcZvOH0f6yR4"; // Your Sheet ID
+
+  var ss;
+  try {
+    ss = SpreadsheetApp.openById(SHEET_ID);
+    Logger.log("Connected to: " + ss.getName());
+  } catch (e) {
+    Logger.log("ERROR: Could not open spreadsheet. Check your SHEET_ID. Details: " + e.message);
+    return;
+  }
+
+  var sheetDefs = {
+    "USERS":          ["UserID","Name","Email","PasswordHash","Role","PositionID","Status","CreatedDate"],
+    "POSITIONS":      ["PositionID","PositionTitle","Department","SubDepartment","ReportsToPositionID","Status","CreatedDate"],
+    "EMPLOYEES":      ["EmployeeCode","EmployeeName","Designation","Department","SubDepartment","PositionID","DateOfJoining","Status"],
+    "DEPARTMENTS":    ["DepartmentID","DepartmentName"],
+    "SUBDEPARTMENTS": ["SubDepartmentID","DepartmentID","SubDepartmentName"],
+    "AOP":            ["Department","PlannedHeadcount"],
+    "AUDIT_LOG":      ["Timestamp","User","Action","RecordType","RecordID","OldValue","NewValue"]
+  };
+
+  var created = [], existing = [];
+  for (var name in sheetDefs) {
+    var sheet = ss.getSheetByName(name);
+    if (!sheet) {
+      sheet = ss.insertSheet(name);
+      sheet.appendRow(sheetDefs[name]);
+      created.push(name);
+      Logger.log("Created sheet: " + name);
+    } else {
+      existing.push(name);
+      Logger.log("Already exists: " + name);
+    }
+  }
+  SpreadsheetApp.flush();
+  Logger.log("DONE. Created: [" + created.join(", ") + "] | Already existed: [" + existing.join(", ") + "]");
+}
+
+/**
  * Automatically creates all required sheets if they do not exist.
  */
 function initializeDatabase() {
