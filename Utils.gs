@@ -1,7 +1,7 @@
 // Utils.gs
 
 const CONFIG = {
-  DB_ID: "YOUR_SPREADSHEET_ID_HERE", // Replace with your Google Sheet ID
+  DB_ID: "1YSwIsej5hXiIv9Hz3Rj7rf8fls_u_x4vcZvOH0f6yR4", // Replace with your Google Sheet ID
   SHEETS: {
     USERS: "USERS",
     POSITIONS: "POSITIONS",
@@ -40,11 +40,17 @@ function getDatabase() {
   if (!id || id === "YOUR_SPREADSHEET_ID_HERE") {
     return SpreadsheetApp.getActiveSpreadsheet();
   }
-  
-  // If user pasted full URL, extract the ID
-  const match = id.match(/\/d\/([a-zA-Z0-9-_]+)/);
-  if (match) id = match[1];
-  
+
+  id = id.toString().trim();
+  const urlMatch = id.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (urlMatch) {
+    id = urlMatch[1];
+  }
+
+  if (!id) {
+    return SpreadsheetApp.getActiveSpreadsheet();
+  }
+
   try {
     return SpreadsheetApp.openById(id);
   } catch (e) {
