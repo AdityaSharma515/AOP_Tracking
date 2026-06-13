@@ -2,14 +2,14 @@
 /**
  * js/dashboard.html
  */
-let sessionData = null;
+var sessionData = null;
+var dashInitialized = false;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    sessionData = await validateSession();
-    if (sessionData) {
-        loadDashboard();
-    }
-});
+function initDashboard() {
+    if (dashInitialized) return;
+    dashInitialized = true;
+    loadDashboard();
+}
 
 async function loadDashboard() {
     showLoader();

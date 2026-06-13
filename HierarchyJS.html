@@ -3,19 +3,19 @@
 /**
  * js/hierarchy.html
  */
-let chart = null;
-let positionsData = [];
-let employeesData = [];
-let sessionRole = null;
+var chart = null;
+var positionsData = [];
+var employeesData = [];
+var hierSessionRole = null;
+var hierInitialized = false;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const session = await validateSession();
-    if (session) {
-        sessionRole = session.role;
-        loadHierarchy();
-        setupHierarchyEvents();
-    }
-});
+function initHierarchy() {
+    if (hierInitialized) return;
+    hierInitialized = true;
+    hierSessionRole = currentUserRole;
+    loadHierarchy();
+    setupHierarchyEvents();
+}
 
 function setupHierarchyEvents() {
     const searchEmp = document.querySelector('input[placeholder="Search Employee..."]');
@@ -31,7 +31,7 @@ function setupHierarchyEvents() {
     }
     
     // Hide download for restricted roles
-    if(sessionRole === 'Assistant Manager' || sessionRole === 'Manager') {
+    if(hierSessionRole === 'Assistant Manager' || hierSessionRole === 'Manager') {
         const downloadBtns = document.querySelectorAll('.d-flex > div > button');
         downloadBtns.forEach(b => b.style.display = 'none');
     } else {

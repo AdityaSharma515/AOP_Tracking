@@ -2,7 +2,7 @@
 /**
  * SPA Router
  */
-let currentUserRole = null;
+var currentUserRole = null;
 
 function navigateTo(pageId) {
     // Hide all pages
@@ -38,6 +38,20 @@ function navigateTo(pageId) {
         
         // Apply RBAC
         applyRBAC();
+        
+        // Initialize page data when navigated to
+        initPage(pageId);
+    }
+}
+
+function initPage(pageId) {
+    switch(pageId) {
+        case 'Dashboard':   if (typeof initDashboard === 'function') initDashboard(); break;
+        case 'Employees':   if (typeof initEmployees === 'function') initEmployees(); break;
+        case 'Positions':   if (typeof initPositions === 'function') initPositions(); break;
+        case 'Departments': if (typeof initDepartments === 'function') initDepartments(); break;
+        case 'Hierarchy':   if (typeof initHierarchy === 'function') initHierarchy(); break;
+        case 'Reports':     if (typeof initReports === 'function') initReports(); break;
     }
 }
 

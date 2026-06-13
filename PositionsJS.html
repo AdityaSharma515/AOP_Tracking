@@ -2,22 +2,22 @@
 /**
  * js/positions.html
  */
-let allPositions = [];
-let filteredPositions = [];
-let posDepartments = [];
-let posSubDepartments = [];
-let currentPosPage = 1;
-let posRowsPerPage = 10;
-let sessionRole = null;
+var allPositions = [];
+var filteredPositions = [];
+var posDepartments = [];
+var posSubDepartments = [];
+var currentPosPage = 1;
+var posRowsPerPage = 10;
+var posSessionRole = null;
+var posInitialized = false;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const session = await validateSession();
-    if (session) {
-        sessionRole = session.role;
-        setupPosEventListeners();
-        loadPositions();
-    }
-});
+function initPositions() {
+    if (posInitialized) return;
+    posInitialized = true;
+    posSessionRole = currentUserRole;
+    setupPosEventListeners();
+    loadPositionsData();
+}
 
 function setupPosEventListeners() {
     const searchInput = document.getElementById('positionSearch');
@@ -45,7 +45,7 @@ function setupPosEventListeners() {
     }
 }
 
-async function loadPositions() {
+async function loadPositionsData() {
     showLoader();
     try {
         const [res, deptRes, subDeptRes] = await Promise.all([
@@ -114,7 +114,7 @@ async function createPosition(data) {
         const res = await server.createPosition(localStorage.getItem('sessionId'), data);
         if (res.success) {
             showSuccess("Position created");
-            loadPositions();
+            loadPositionsData();
             const modal = bootstrap.Modal.getInstance(document.getElementById('addPositionModal'));
             if(modal) modal.hide();
         } else {
@@ -133,7 +133,7 @@ async function updatePosition(id, data) {
         const res = await server.updatePosition(localStorage.getItem('sessionId'), id, data);
         if (res.success) {
             showSuccess("Position updated");
-            loadPositions();
+            loadPositionsData();
         } else {
             showError(res.message);
         }
@@ -151,7 +151,7 @@ async function deletePosition(id) {
         const res = await server.deletePosition(localStorage.getItem('sessionId'), id);
         if (res.success) {
             showSuccess("Position deleted");
-            loadPositions();
+            loadPositionsData();
         } else {
             showError(res.message);
         }
@@ -235,7 +235,7 @@ function populatePositionTable() {
     const pageData = paginateTable(filteredPositions, currentPosPage, posRowsPerPage);
     
     pageData.data.forEach(pos => {
-        const canDelete = sessionRole === 'Admin';
+        const canDelete = posSessionRole === 'Admin';
         const isVacant = pos.Status === 'Vacant';
         
         const tr = document.createElement('tr');

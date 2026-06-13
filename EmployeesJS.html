@@ -2,22 +2,22 @@
 /**
  * js/employees.html
  */
-let allEmployees = [];
-let filteredEmployees = [];
-let currentPage = 1;
-let rowsPerPage = 10;
-let sessionRole = null;
+var allEmployees = [];
+var filteredEmployees = [];
+var currentPage = 1;
+var rowsPerPage = 10;
+var empSessionRole = null;
+var empInitialized = false;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const session = await validateSession();
-    if (session) {
-        sessionRole = session.role;
-        setupEventListeners();
-        loadEmployees();
-        loadDepartments();
-        loadPositions();
-    }
-});
+function initEmployees() {
+    if (empInitialized) return;
+    empInitialized = true;
+    empSessionRole = currentUserRole;
+    setupEventListeners();
+    loadEmployees();
+    loadEmpDepartments();
+    loadEmpPositions();
+}
 
 function setupEventListeners() {
     const searchInput = document.querySelector('input[placeholder="Search employees..."]');
@@ -166,8 +166,8 @@ function populateEmployeeTable() {
     
     pageData.data.forEach(emp => {
         const tr = document.createElement('tr');
-        const canDelete = ['Admin'].includes(sessionRole);
-        const canEdit = ['Admin', 'Plant Head', 'AGM', 'Sr Manager'].includes(sessionRole);
+        const canDelete = ['Admin'].includes(empSessionRole);
+        const canEdit = ['Admin', 'Plant Head', 'AGM', 'Sr Manager'].includes(empSessionRole);
         
         tr.innerHTML = `
             <td class="ps-4 fw-semibold">${emp.EmployeeCode}</td>
@@ -230,7 +230,7 @@ function changePage(page, e) {
     }
 }
 
-async function loadDepartments() {
+async function loadEmpDepartments() {
     try {
         const res = await server.getDepartments(localStorage.getItem('sessionId'));
         if(res.success) {
@@ -239,7 +239,7 @@ async function loadDepartments() {
     } catch(e){}
 }
 
-async function loadPositions() {
+async function loadEmpPositions() {
     try {
         const res = await server.getPositions(localStorage.getItem('sessionId'));
         if(res.success) {

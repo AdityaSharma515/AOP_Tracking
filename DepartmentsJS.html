@@ -2,17 +2,17 @@
 /**
  * js/departments.html
  */
-let allDepartments = [];
-let allSubDepartments = [];
-let sessionRole = null;
+var allDepartments = [];
+var allSubDepartments = [];
+var deptSessionRole = null;
+var deptInitialized = false;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const session = await validateSession();
-    if (session) {
-        sessionRole = session.role;
-        loadDepartments();
-    }
-});
+function initDepartments() {
+    if (deptInitialized) return;
+    deptInitialized = true;
+    deptSessionRole = currentUserRole;
+    loadDepartments();
+}
 
 async function loadDepartments() {
     showLoader();
@@ -141,7 +141,7 @@ function populateDepartmentTable() {
     tbody.innerHTML = '';
     
     allDepartments.forEach(dept => {
-        const canDelete = sessionRole === 'Admin';
+        const canDelete = deptSessionRole === 'Admin';
         
         const tr = document.createElement('tr');
         tr.className = 'table-light';

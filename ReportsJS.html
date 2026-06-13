@@ -2,19 +2,19 @@
 /**
  * js/reports.html
  */
-let sessionRole = null;
+var rptSessionRole = null;
+var rptInitialized = false;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const session = await validateSession();
-    if (session) {
-        sessionRole = session.role;
-        loadReports();
-    }
-});
+function initReports() {
+    if (rptInitialized) return;
+    rptInitialized = true;
+    rptSessionRole = currentUserRole;
+    loadReports();
+}
 
 function loadReports() {
     // Hide buttons if restricted
-    if(sessionRole === 'Assistant Manager' || sessionRole === 'Manager') {
+    if(rptSessionRole === 'Assistant Manager' || rptSessionRole === 'Manager') {
         const downloadBtns = document.querySelectorAll('.btn-outline-success, .btn-outline-danger');
         downloadBtns.forEach(b => b.style.display = 'none');
     }
