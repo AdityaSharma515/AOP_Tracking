@@ -15,25 +15,33 @@ function initDepartments() {
 }
 
 async function loadDepartments() {
+    var tbody = document.getElementById('departmentsTableBody');
     showLoader();
     try {
-        const [deptRes, subDeptRes] = await Promise.all([
-            server.getDepartments(localStorage.getItem('sessionId')),
-            server.getSubDepartments(localStorage.getItem('sessionId'))
-        ]);
+        // Load departments first
+        var deptRes = await server.getDepartments(localStorage.getItem('sessionId'));
         
-        if (deptRes.success) {
-            allDepartments = deptRes.data;
-            allSubDepartments = subDeptRes.success ? subDeptRes.data : [];
-            populateDepartmentTable();
-            populateDepartmentDropdowns();
+        if (deptRes && deptRes.success) {
+            allDepartments = Array.isArray(deptRes.data) ? deptRes.data : [];
         } else {
-            showError(deptRes.message);
-            document.getElementById('departmentsTableBody').innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">No departments found</td></tr>`;
+            allDepartments = [];
+            if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted">No departments found (' + (deptRes ? deptRes.message : 'No response') + ')</td></tr>';
+            hideLoader();
+            return;
         }
+        
+        // Load sub-departments separately (don't block departments from showing)
+        try {
+            var subDeptRes = await server.getSubDepartments(localStorage.getItem('sessionId'));
+            allSubDepartments = (subDeptRes && subDeptRes.success && Array.isArray(subDeptRes.data)) ? subDeptRes.data : [];
+        } catch (subErr) {
+            allSubDepartments = [];
+        }
+        
+        populateDepartmentTable();
+        populateDepartmentDropdowns();
     } catch (e) {
-        showError("Failed to load departments");
-        document.getElementById('departmentsTableBody').innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">Error loading departments</td></tr>`;
+        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-danger">Error: ' + (e.message || e) + '</td></tr>';
     } finally {
         hideLoader();
     }

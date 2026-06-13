@@ -73,6 +73,8 @@ function getDepartments(sessionId) {
   if (!auth.success) return auth;
 
   const sheet = getSheet(CONFIG.SHEETS.DEPARTMENTS);
+  if (!sheet) return buildResponse(true, "No departments sheet found", []);
+  
   const depts = getRowsAsObjects(sheet);
   depts.forEach(d => delete d._rowIndex);
   

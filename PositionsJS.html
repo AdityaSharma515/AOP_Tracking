@@ -46,32 +46,43 @@ function setupPosEventListeners() {
 }
 
 async function loadPositionsData() {
+    var tbody = document.getElementById('positionsTableBody');
     showLoader();
     try {
-        const [res, deptRes, subDeptRes] = await Promise.all([
-            server.getPositions(localStorage.getItem('sessionId')),
-            server.getDepartments(localStorage.getItem('sessionId')),
-            server.getSubDepartments(localStorage.getItem('sessionId'))
-        ]);
-        
-        if (deptRes.success) {
-            posDepartments = deptRes.data;
-            posSubDepartments = subDeptRes.success ? subDeptRes.data : [];
-            populatePosDepartmentDropdowns();
+        // Load departments for dropdowns
+        try {
+            var deptRes = await server.getDepartments(localStorage.getItem('sessionId'));
+            if (deptRes && deptRes.success) {
+                posDepartments = Array.isArray(deptRes.data) ? deptRes.data : [];
+            }
+        } catch (dErr) {
+            posDepartments = [];
         }
         
-        if (res.success) {
-            allPositions = res.data;
-            filteredPositions = [...allPositions];
+        // Load sub-departments for dropdowns
+        try {
+            var subDeptRes = await server.getSubDepartments(localStorage.getItem('sessionId'));
+            posSubDepartments = (subDeptRes && subDeptRes.success && Array.isArray(subDeptRes.data)) ? subDeptRes.data : [];
+        } catch (sErr) {
+            posSubDepartments = [];
+        }
+        
+        populatePosDepartmentDropdowns();
+        
+        // Load positions
+        var res = await server.getPositions(localStorage.getItem('sessionId'));
+        if (res && res.success) {
+            allPositions = Array.isArray(res.data) ? res.data : [];
+            filteredPositions = allPositions.slice();
             populatePositionTable();
             populateReportsToDropdown();
         } else {
-            showError(res.message);
-            document.getElementById('positionsTableBody').innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No positions found</td></tr>`;
+            allPositions = [];
+            filteredPositions = [];
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No positions found (' + (res ? res.message : 'No response') + ')</td></tr>';
         }
     } catch (e) {
-        showError("Failed to load positions");
-        document.getElementById('positionsTableBody').innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Error loading positions</td></tr>`;
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error: ' + (e.message || e) + '</td></tr>';
     } finally {
         hideLoader();
     }
