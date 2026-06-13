@@ -4,6 +4,8 @@
  */
 let allPositions = [];
 let filteredPositions = [];
+let posDepartments = [];
+let posSubDepartments = [];
 let currentPosPage = 1;
 let posRowsPerPage = 10;
 let sessionRole = null;
@@ -18,28 +20,89 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function setupPosEventListeners() {
-    const searchInput = document.querySelector('input[placeholder="Search positions..."]');
+    const searchInput = document.getElementById('positionSearch');
     if(searchInput) searchInput.addEventListener('input', debounce(searchPositions, 300));
     
     const filters = document.querySelectorAll('.form-select');
     filters.forEach(f => f.addEventListener('change', filterPositions));
+    
+    const deptSelect = document.getElementById('newPosDept');
+    if (deptSelect) {
+        deptSelect.addEventListener('change', (e) => {
+            const deptName = e.target.value;
+            const dept = posDepartments.find(d => d.DepartmentName === deptName);
+            const subDeptSelect = document.getElementById('newPosSubDept');
+            if (subDeptSelect) {
+                subDeptSelect.innerHTML = '<option value="" selected disabled>Select Sub Department</option>';
+                if (dept) {
+                    const subs = posSubDepartments.filter(s => s.DepartmentID === dept.DepartmentID);
+                    subs.forEach(s => {
+                        subDeptSelect.innerHTML += `<option value="${s.SubDepartmentName}">${s.SubDepartmentName}</option>`;
+                    });
+                }
+            }
+        });
+    }
 }
 
 async function loadPositions() {
     showLoader();
     try {
-        const res = await server.getPositions(localStorage.getItem('sessionId'));
+        const [res, deptRes, subDeptRes] = await Promise.all([
+            server.getPositions(localStorage.getItem('sessionId')),
+            server.getDepartments(localStorage.getItem('sessionId')),
+            server.getSubDepartments(localStorage.getItem('sessionId'))
+        ]);
+        
+        if (deptRes.success) {
+            posDepartments = deptRes.data;
+            posSubDepartments = subDeptRes.success ? subDeptRes.data : [];
+            populatePosDepartmentDropdowns();
+        }
+        
         if (res.success) {
             allPositions = res.data;
             filteredPositions = [...allPositions];
             populatePositionTable();
+            populateReportsToDropdown();
         } else {
             showError(res.message);
+            document.getElementById('positionsTableBody').innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No positions found</td></tr>`;
         }
     } catch (e) {
         showError("Failed to load positions");
+        document.getElementById('positionsTableBody').innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Error loading positions</td></tr>`;
     } finally {
         hideLoader();
+    }
+}
+
+function populatePosDepartmentDropdowns() {
+    const filter = document.getElementById('positionDeptFilter');
+    const deptSelect = document.getElementById('newPosDept');
+    
+    if (filter) {
+        filter.innerHTML = '<option selected value="All Departments">All Departments</option>';
+        posDepartments.forEach(d => {
+            filter.innerHTML += `<option value="${d.DepartmentName}">${d.DepartmentName}</option>`;
+        });
+    }
+    
+    if (deptSelect) {
+        deptSelect.innerHTML = '<option value="" selected disabled>Select Department</option>';
+        posDepartments.forEach(d => {
+            deptSelect.innerHTML += `<option value="${d.DepartmentName}">${d.DepartmentName}</option>`;
+        });
+    }
+}
+
+function populateReportsToDropdown() {
+    const reportsToSelect = document.getElementById('newPosReportsTo');
+    if (reportsToSelect) {
+        reportsToSelect.innerHTML = '<option value="" selected disabled>Select Parent Position</option>';
+        allPositions.forEach(p => {
+            reportsToSelect.innerHTML += `<option value="${p.PositionID}">${p.PositionTitle} (${p.PositionID})</option>`;
+        });
     }
 }
 
@@ -136,6 +199,24 @@ function applyPosFilters(searchTerm) {
 
     currentPosPage = 1;
     populatePositionTable();
+}
+
+function handleAddPosition() {
+    const title = document.getElementById('newPosTitle')?.value.trim();
+    const dept = document.getElementById('newPosDept')?.value;
+    const subDept = document.getElementById('newPosSubDept')?.value || '';
+    const reportsTo = document.getElementById('newPosReportsTo')?.value || '';
+    const status = document.getElementById('newPosStatus')?.value;
+    
+    const data = {
+        PositionTitle: title,
+        Department: dept,
+        SubDepartment: subDept,
+        ReportsToPositionID: reportsTo,
+        Status: status
+    };
+    
+    createPosition(data);
 }
 
 function validatePositionForm(data) {

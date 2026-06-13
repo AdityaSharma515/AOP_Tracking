@@ -29,9 +29,11 @@ async function loadDepartments() {
             populateDepartmentDropdowns();
         } else {
             showError(deptRes.message);
+            document.getElementById('departmentsTableBody').innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">No departments found</td></tr>`;
         }
     } catch (e) {
         showError("Failed to load departments");
+        document.getElementById('departmentsTableBody').innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">Error loading departments</td></tr>`;
     } finally {
         hideLoader();
     }
