@@ -25,7 +25,7 @@ async function loadDepartments() {
             allDepartments = Array.isArray(deptRes.data) ? deptRes.data : [];
         } else {
             allDepartments = [];
-            if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted">No departments found (' + (deptRes ? deptRes.message : 'No response') + ')</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="2" class="text-center py-4 text-muted">No departments found (' + (deptRes ? deptRes.message : 'No response') + ')</td></tr>';
             hideLoader();
             return;
         }
@@ -41,7 +41,7 @@ async function loadDepartments() {
         populateDepartmentTable();
         populateDepartmentDropdowns();
     } catch (e) {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-danger">Error: ' + (e.message || e) + '</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="2" class="text-center py-4 text-danger">Error: ' + (e.message || e) + '</td></tr>';
     } finally {
         hideLoader();
     }
@@ -74,6 +74,8 @@ async function updateDepartment(id, name) {
         if (res.success) {
             showSuccess("Department updated");
             loadDepartments();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editDepartmentModal'));
+            if(modal) modal.hide();
         } else {
             showError(res.message);
         }
@@ -139,7 +141,25 @@ async function deleteSubDepartment(id) {
 }
 
 function editDepartment(id) {
-    // Trigger modal for edit
+    const dept = allDepartments.find(d => d.DepartmentID === id);
+    if (!dept) return;
+    
+    document.getElementById('editDeptId').value = dept.DepartmentID;
+    document.getElementById('editDeptName').value = dept.DepartmentName;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editDepartmentModal'));
+    modal.show();
+}
+
+function handleEditDepartment() {
+    const id = document.getElementById('editDeptId').value;
+    const nameInput = document.getElementById('editDeptName');
+    
+    if (id && nameInput && nameInput.value) {
+        updateDepartment(id, nameInput.value.trim());
+    } else {
+        showError("Department name is required");
+    }
 }
 
 function populateDepartmentTable() {
@@ -154,8 +174,7 @@ function populateDepartmentTable() {
         const tr = document.createElement('tr');
         tr.className = 'table-light';
         tr.innerHTML = `
-            <td class="ps-4 fw-bold">${dept.DepartmentID}</td>
-            <td class="fw-bold">${dept.DepartmentName}</td>
+            <td class="ps-4 fw-bold">${dept.DepartmentName}</td>
             <td class="pe-4 text-end">
                 <button class="btn btn-sm btn-light me-1" onclick="editDepartment('${dept.DepartmentID}')"><i class="bi bi-pencil"></i></button>
                 ${canDelete ? `<button class="btn btn-sm btn-light text-danger" onclick="deleteDepartment('${dept.DepartmentID}')"><i class="bi bi-trash"></i></button>` : ''}
@@ -169,8 +188,7 @@ function populateDepartmentTable() {
             subDepts.forEach(sub => {
                 const subTr = document.createElement('tr');
                 subTr.innerHTML = `
-                    <td class="ps-5 text-muted">${sub.SubDepartmentID}</td>
-                    <td class="ps-4 text-muted"><i class="bi bi-arrow-return-right me-2"></i> ${sub.SubDepartmentName}</td>
+                    <td class="ps-5 text-muted"><i class="bi bi-arrow-return-right me-2"></i> ${sub.SubDepartmentName}</td>
                     <td class="pe-4 text-end">
                         ${canDelete ? `<button class="btn btn-sm btn-light text-danger" onclick="deleteSubDepartment('${sub.SubDepartmentID}')"><i class="bi bi-trash"></i></button>` : ''}
                     </td>
@@ -179,13 +197,13 @@ function populateDepartmentTable() {
             });
         } else {
             const emptyTr = document.createElement('tr');
-            emptyTr.innerHTML = `<td colspan="3" class="text-muted ps-5 small fst-italic">No sub-departments</td>`;
+            emptyTr.innerHTML = `<td colspan="2" class="text-muted ps-5 small fst-italic">No sub-departments</td>`;
             tbody.appendChild(emptyTr);
         }
     });
 
     if (allDepartments.length === 0) {
-         tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">No departments found</td></tr>`;
+         tbody.innerHTML = `<tr><td colspan="2" class="text-center py-4 text-muted">No departments found</td></tr>`;
     }
 }
 
