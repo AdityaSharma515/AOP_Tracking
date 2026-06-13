@@ -35,6 +35,7 @@ async function loadEmployees() {
             allEmployees = res.data;
             filteredEmployees = [...allEmployees];
             populateEmployeeTable();
+            populateManagerDropdown();
         } else {
             showError(res.message);
         }
@@ -230,11 +231,38 @@ function changePage(page, e) {
     }
 }
 
+var empDepartmentsList = [];
+var empSubDepartmentsList = [];
+var empPositionsList = [];
+var empManagersList = [];
+
 async function loadEmpDepartments() {
     try {
-        const res = await server.getDepartments(localStorage.getItem('sessionId'));
-        if(res.success) {
-            // Populate department dropdowns in filters and modals
+        const [deptRes, subDeptRes] = await Promise.all([
+            server.getDepartments(localStorage.getItem('sessionId')),
+            server.getSubDepartments(localStorage.getItem('sessionId'))
+        ]);
+        
+        if(deptRes.success) {
+            empDepartmentsList = deptRes.data;
+            const deptSelect = document.getElementById('newEmpDept');
+            if (deptSelect) {
+                deptSelect.innerHTML = '<option value="" selected disabled>Select Department</option>';
+                empDepartmentsList.forEach(d => {
+                    deptSelect.innerHTML += `<option value="${d.DepartmentName}">${d.DepartmentName}</option>`;
+                });
+            }
+        }
+        
+        if (subDeptRes && subDeptRes.success) {
+            empSubDepartmentsList = subDeptRes.data;
+            const subDeptSelect = document.getElementById('newEmpSubDept');
+            if (subDeptSelect) {
+                subDeptSelect.innerHTML = '<option value="" selected disabled>Select Sub Department</option>';
+                empSubDepartmentsList.forEach(s => {
+                    subDeptSelect.innerHTML += `<option value="${s.SubDepartmentName}">${s.SubDepartmentName}</option>`;
+                });
+            }
         }
     } catch(e){}
 }
@@ -243,9 +271,44 @@ async function loadEmpPositions() {
     try {
         const res = await server.getPositions(localStorage.getItem('sessionId'));
         if(res.success) {
-            // Populate position dropdowns in modal
+            empPositionsList = res.data;
+            const posSelect = document.getElementById('newEmpPosition');
+            if (posSelect) {
+                posSelect.innerHTML = '<option value="" selected disabled>Select Position</option>';
+                empPositionsList.forEach(p => {
+                    posSelect.innerHTML += `<option value="${p.PositionID}">${p.PositionTitle} (${p.PositionID})</option>`;
+                });
+            }
         }
     } catch(e){}
+}
+
+function populateManagerDropdown() {
+    const mgrSelect = document.getElementById('newEmpManager');
+    if (mgrSelect) {
+        mgrSelect.innerHTML = '<option value="" selected disabled>Select Manager</option>';
+        allEmployees.forEach(e => {
+            mgrSelect.innerHTML += `<option value="${e.EmployeeCode}">${e.EmployeeName} (${e.EmployeeCode})</option>`;
+        });
+    }
+}
+
+function handleAddEmployee() {
+    const data = {
+        EmployeeCode: document.getElementById('newEmpCode')?.value || '',
+        EmployeeName: document.getElementById('newEmpName')?.value || '',
+        Designation: document.getElementById('newEmpDesignation')?.value || '',
+        Department: document.getElementById('newEmpDept')?.value || '',
+        SubDepartment: document.getElementById('newEmpSubDept')?.value || '',
+        PositionID: document.getElementById('newEmpPosition')?.value || '',
+        ReportsTo: document.getElementById('newEmpManager')?.value || '',
+        JoiningDate: document.getElementById('newEmpJoiningDate')?.value || '',
+        Status: document.getElementById('newEmpStatus')?.value || 'Active'
+    };
+    
+    if (validateEmployeeForm(data)) {
+        createEmployee(data);
+    }
 }
 
 function validateEmployeeForm(data) {

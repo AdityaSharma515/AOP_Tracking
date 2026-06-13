@@ -88,51 +88,47 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Employee Code</label>
-                                <input type="text" class="form-control" required>
+                                <input type="text" class="form-control" required id="newEmpCode">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Employee Name</label>
-                                <input type="text" class="form-control" required>
+                                <input type="text" class="form-control" required id="newEmpName">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Designation</label>
-                                <input type="text" class="form-control" required>
+                                <input type="text" class="form-control" required id="newEmpDesignation">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Department</label>
-                                <select class="form-select" required>
+                                <select class="form-select" required id="newEmpDept">
                                     <option value="" selected disabled>Select Department</option>
-                                    <option>Production</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Sub Department</label>
-                                <select class="form-select">
+                                <select class="form-select" id="newEmpSubDept">
                                     <option value="" selected disabled>Select Sub Department</option>
-                                    <option>Assembly</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Position</label>
-                                <select class="form-select" required>
+                                <select class="form-select" required id="newEmpPosition">
                                     <option value="" selected disabled>Select Position</option>
-                                    <option>POS-045</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Reports To</label>
-                                <select class="form-select">
+                                <select class="form-select" id="newEmpManager">
                                     <option value="" selected disabled>Select Manager</option>
-                                    <option>EMP-005</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Joining Date</label>
-                                <input type="date" class="form-control" required>
+                                <input type="date" class="form-control" required id="newEmpJoiningDate">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Status</label>
-                                <select class="form-select" required>
+                                <select class="form-select" required id="newEmpStatus">
                                     <option value="Active" selected>Active</option>
                                     <option value="Inactive">Inactive</option>
                                 </select>
@@ -142,7 +138,7 @@
                 </div>
                 <div class="modal-footer border-0 bg-light">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary">Save Employee</button>
+                    <button type="button" class="btn btn-primary" onclick="handleAddEmployee()">Save Employee</button>
                 </div>
             </div>
         </div>
