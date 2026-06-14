@@ -36,6 +36,7 @@ async function loadEmployees() {
             filteredEmployees = [...allEmployees];
             populateEmployeeTable();
             populateManagerDropdown();
+            populateDesignationFilter();
         } else {
             showError(res.message);
         }
@@ -43,6 +44,17 @@ async function loadEmployees() {
         showError("Failed to load employees");
     } finally {
         hideLoader();
+    }
+}
+
+function populateDesignationFilter() {
+    const desigFilter = document.getElementById('empDesigFilter');
+    if (desigFilter) {
+        const designations = [...new Set(allEmployees.map(e => e.Designation).filter(Boolean))];
+        desigFilter.innerHTML = '<option selected value="All Designations">All Designations</option>';
+        designations.forEach(desig => {
+            desigFilter.innerHTML += `<option value="${desig}">${desig}</option>`;
+        });
     }
 }
 
@@ -121,10 +133,9 @@ function filterEmployees() {
 }
 
 function applyFilters(searchTerm) {
-    const selects = document.querySelectorAll('.card-body .form-select');
-    const deptFilter = selects[0]?.value;
-    const desigFilter = selects[1]?.value;
-    const statusFilter = selects[2]?.value;
+    const deptFilter = document.getElementById('empDeptFilter')?.value;
+    const desigFilter = document.getElementById('empDesigFilter')?.value;
+    const statusFilter = document.getElementById('empStatusFilter')?.value;
 
     filteredEmployees = allEmployees.filter(emp => {
         let match = true;
@@ -150,8 +161,12 @@ function applyFilters(searchTerm) {
 
 function resetFilters() {
     document.querySelector('input[placeholder="Search employees..."]').value = '';
-    const selects = document.querySelectorAll('.card-body .form-select');
-    selects.forEach(s => s.selectedIndex = 0);
+    const deptFilter = document.getElementById('empDeptFilter');
+    const desigFilter = document.getElementById('empDesigFilter');
+    const statusFilter = document.getElementById('empStatusFilter');
+    if (deptFilter) deptFilter.selectedIndex = 0;
+    if (desigFilter) desigFilter.selectedIndex = 0;
+    if (statusFilter) statusFilter.selectedIndex = 0;
     
     filteredEmployees = [...allEmployees];
     currentPage = 1;
@@ -246,10 +261,17 @@ async function loadEmpDepartments() {
         if(deptRes.success) {
             empDepartmentsList = deptRes.data;
             const deptSelect = document.getElementById('newEmpDept');
+            const deptFilter = document.getElementById('empDeptFilter');
             if (deptSelect) {
                 deptSelect.innerHTML = '<option value="" selected disabled>Select Department</option>';
                 empDepartmentsList.forEach(d => {
                     deptSelect.innerHTML += `<option value="${d.DepartmentName}">${d.DepartmentName}</option>`;
+                });
+            }
+            if (deptFilter) {
+                deptFilter.innerHTML = '<option selected value="All Departments">All Departments</option>';
+                empDepartmentsList.forEach(d => {
+                    deptFilter.innerHTML += `<option value="${d.DepartmentName}">${d.DepartmentName}</option>`;
                 });
             }
         }
