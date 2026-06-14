@@ -45,24 +45,17 @@
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <input type="text" class="form-control" placeholder="Search employees...">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <select class="form-select">
                                     <option selected>All Departments</option>
                                     <option>Production</option>
                                     <option>QA</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <select class="form-select">
-                                    <option selected>All Designations</option>
-                                    <option>Manager</option>
-                                    <option>Engineer</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <select class="form-select">
                                     <option selected>All Statuses</option>
                                     <option>Active</option>
@@ -81,7 +74,6 @@
                                     <tr>
                                         <th class="ps-4">Employee Code</th>
                                         <th>Employee Name</th>
-                                        <th>Designation</th>
                                         <th>Department</th>
                                         <th>Sub Department</th>
                                         <th>Position</th>
@@ -90,7 +82,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="employeesTableBody">
-                                    <tr><td colspan="8" class="text-center py-4 text-muted">Loading employees...</td></tr>
+                                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading employees...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -128,10 +120,6 @@
                             <div class="col-md-6">
                                 <label class="form-label">Employee Name</label>
                                 <input type="text" id="newEmpName" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Designation</label>
-                                <input type="text" id="newEmpDesignation" class="form-control" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Department</label>

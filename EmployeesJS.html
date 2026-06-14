@@ -25,6 +25,33 @@ function setupEventListeners() {
     
     const filters = document.querySelectorAll('.form-select');
     filters.forEach(f => f.addEventListener('change', filterEmployees));
+    
+    const deptSelect = document.getElementById('newEmpDept');
+    if (deptSelect) {
+        deptSelect.addEventListener('change', (e) => {
+            const deptName = e.target.value;
+            const dept = empDepartmentsList.find(d => d.DepartmentName === deptName);
+            const subDeptSelect = document.getElementById('newEmpSubDept');
+            if (subDeptSelect) {
+                subDeptSelect.innerHTML = '<option value="" selected disabled>Select Sub Department</option>';
+                if (dept) {
+                    const subs = empSubDepartmentsList.filter(s => s.DepartmentID === dept.DepartmentID);
+                    subs.forEach(s => {
+                        subDeptSelect.innerHTML += `<option value="${s.SubDepartmentName}">${s.SubDepartmentName}</option>`;
+                    });
+                }
+            }
+        });
+    }
+
+    const addEmpModalEl = document.getElementById('addEmployeeModal');
+    if (addEmpModalEl) {
+        addEmpModalEl.addEventListener('hidden.bs.modal', () => {
+            document.querySelector('#addEmployeeModal form').reset();
+            document.querySelector('#addEmployeeModal .modal-title').textContent = 'Add New Employee';
+            if (typeof editingEmployeeCode !== 'undefined') editingEmployeeCode = null;
+        });
+    }
 }
 
 async function loadEmployees() {
@@ -32,11 +59,6 @@ async function loadEmployees() {
     try {
         const res = await server.getEmployees(localStorage.getItem('sessionId'));
         if (res.success) {
-            allEmployees = res.data;
-            filteredEmployees = [...allEmployees];
-            populateEmployeeTable();
-            populateManagerDropdown();
-            populateDesignationFilter();
         } else {
             showError(res.message);
         }
@@ -44,17 +66,6 @@ async function loadEmployees() {
         showError("Failed to load employees");
     } finally {
         hideLoader();
-    }
-}
-
-function populateDesignationFilter() {
-    const desigFilter = document.getElementById('empDesigFilter');
-    if (desigFilter) {
-        const designations = [...new Set(allEmployees.map(e => e.Designation).filter(Boolean))];
-        desigFilter.innerHTML = '<option selected value="All Designations">All Designations</option>';
-        designations.forEach(desig => {
-            desigFilter.innerHTML += `<option value="${desig}">${desig}</option>`;
-        });
     }
 }
 
@@ -87,6 +98,8 @@ async function updateEmployee(code, data) {
         if (res.success) {
             showSuccess("Employee updated");
             loadEmployees();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addEmployeeModal'));
+            if(modal) modal.hide();
         } else {
             showError(res.message);
         }
@@ -115,10 +128,43 @@ async function deleteEmployee(code) {
     }
 }
 
+let editingEmployeeCode = null;
+
 function viewEmployee(code) {
     const emp = allEmployees.find(e => e.EmployeeCode === code);
     if(emp) {
-        // Integrate modal view data binding here
+        document.getElementById('newEmpCode').value = emp.EmployeeCode;
+        document.getElementById('newEmpName').value = emp.EmployeeName;
+        document.getElementById('newEmpDept').value = emp.Department;
+        
+        const e = new Event('change');
+        document.getElementById('newEmpDept').dispatchEvent(e);
+        
+        setTimeout(() => {
+            document.getElementById('newEmpSubDept').value = emp.SubDepartment || '';
+            document.getElementById('newEmpPosition').value = emp.PositionID || '';
+            document.getElementById('newEmpManager').value = emp.ReportsTo || '';
+            
+            if (emp.JoiningDate) {
+                try {
+                    const d = new Date(emp.JoiningDate);
+                    if (!isNaN(d.getTime())) {
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        document.getElementById('newEmpJoiningDate').value = `${yyyy}-${mm}-${dd}`;
+                    }
+                } catch(err) {}
+            }
+            
+            document.getElementById('newEmpStatus').value = emp.Status;
+        }, 100);
+
+        document.querySelector('#addEmployeeModal .modal-title').textContent = 'Edit Employee';
+        editingEmployeeCode = code;
+        
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addEmployeeModal'));
+        modal.show();
     }
 }
 
@@ -134,7 +180,6 @@ function filterEmployees() {
 
 function applyFilters(searchTerm) {
     const deptFilter = document.getElementById('empDeptFilter')?.value;
-    const desigFilter = document.getElementById('empDesigFilter')?.value;
     const statusFilter = document.getElementById('empStatusFilter')?.value;
 
     filteredEmployees = allEmployees.filter(emp => {
@@ -143,13 +188,11 @@ function applyFilters(searchTerm) {
         if (searchTerm) {
             match = match && (
                 (emp.EmployeeCode && emp.EmployeeCode.toLowerCase().includes(searchTerm)) ||
-                (emp.EmployeeName && emp.EmployeeName.toLowerCase().includes(searchTerm)) ||
-                (emp.Designation && emp.Designation.toLowerCase().includes(searchTerm))
+                (emp.EmployeeName && emp.EmployeeName.toLowerCase().includes(searchTerm))
             );
         }
         
         if (deptFilter && deptFilter !== 'All Departments') match = match && emp.Department === deptFilter;
-        if (desigFilter && desigFilter !== 'All Designations') match = match && emp.Designation === desigFilter;
         if (statusFilter && statusFilter !== 'All Statuses') match = match && emp.Status === statusFilter;
         
         return match;
@@ -162,10 +205,8 @@ function applyFilters(searchTerm) {
 function resetFilters() {
     document.querySelector('input[placeholder="Search employees..."]').value = '';
     const deptFilter = document.getElementById('empDeptFilter');
-    const desigFilter = document.getElementById('empDesigFilter');
     const statusFilter = document.getElementById('empStatusFilter');
     if (deptFilter) deptFilter.selectedIndex = 0;
-    if (desigFilter) desigFilter.selectedIndex = 0;
     if (statusFilter) statusFilter.selectedIndex = 0;
     
     filteredEmployees = [...allEmployees];
@@ -185,20 +226,19 @@ function populateEmployeeTable() {
         const canDelete = ['Admin'].includes(empSessionRole);
         const canEdit = ['Admin', 'Plant Head', 'AGM', 'Sr Manager'].includes(empSessionRole);
         
+        let posObj = empPositionsList.find(p => p.PositionID === emp.PositionID);
+        let posName = posObj ? posObj.PositionTitle : (emp.PositionID || '-');
+        
         tr.innerHTML = `
             <td class="ps-4 fw-semibold">${emp.EmployeeCode}</td>
             <td>
-                <div class="d-flex align-items-center">
-                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(emp.EmployeeName)}&background=random" class="rounded-circle me-2" width="32" height="32">
-                    <span>${emp.EmployeeName}</span>
-                </div>
+                <span>${emp.EmployeeName}</span>
             </td>
-            <td>${emp.Designation}</td>
             <td>${emp.Department}</td>
             <td>${emp.SubDepartment || '-'}</td>
-            <td>${emp.PositionID || '-'}</td>
+            <td>${posName}</td>
             <td><span class="badge bg-${emp.Status === 'Active' ? 'success' : 'secondary'}">${emp.Status}</span></td>
-            <td class="pe-4 text-end">
+            <td class="pe-4 text-end text-nowrap">
                 <button class="btn btn-sm btn-light me-1" title="View" onclick="viewEmployee('${emp.EmployeeCode}')"><i class="bi bi-eye"></i></button>
                 ${canEdit ? `<button class="btn btn-sm btn-light me-1" title="Edit" onclick="viewEmployee('${emp.EmployeeCode}')"><i class="bi bi-pencil"></i></button>` : ''}
                 ${canDelete ? `<button class="btn btn-sm btn-light text-danger" title="Delete" onclick="deleteEmployee('${emp.EmployeeCode}')"><i class="bi bi-trash"></i></button>` : ''}
@@ -278,13 +318,6 @@ async function loadEmpDepartments() {
         
         if (subDeptRes && subDeptRes.success) {
             empSubDepartmentsList = subDeptRes.data;
-            const subDeptSelect = document.getElementById('newEmpSubDept');
-            if (subDeptSelect) {
-                subDeptSelect.innerHTML = '<option value="" selected disabled>Select Sub Department</option>';
-                empSubDepartmentsList.forEach(s => {
-                    subDeptSelect.innerHTML += `<option value="${s.SubDepartmentName}">${s.SubDepartmentName}</option>`;
-                });
-            }
         }
     } catch(e){}
 }
@@ -319,7 +352,6 @@ function handleAddEmployee() {
     const data = {
         EmployeeCode: document.getElementById('newEmpCode')?.value || '',
         EmployeeName: document.getElementById('newEmpName')?.value || '',
-        Designation: document.getElementById('newEmpDesignation')?.value || '',
         Department: document.getElementById('newEmpDept')?.value || '',
         SubDepartment: document.getElementById('newEmpSubDept')?.value || '',
         PositionID: document.getElementById('newEmpPosition')?.value || '',
@@ -329,7 +361,11 @@ function handleAddEmployee() {
     };
     
     if (validateEmployeeForm(data)) {
-        createEmployee(data);
+        if (typeof editingEmployeeCode !== 'undefined' && editingEmployeeCode) {
+            updateEmployee(editingEmployeeCode, data);
+        } else {
+            createEmployee(data);
+        }
     }
 }
 
