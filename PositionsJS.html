@@ -43,6 +43,15 @@ function setupPosEventListeners() {
             }
         });
     }
+
+    const addPosModalEl = document.getElementById('addPositionModal');
+    if (addPosModalEl) {
+        addPosModalEl.addEventListener('hidden.bs.modal', () => {
+            document.querySelector('#addPositionModal form').reset();
+            document.querySelector('#addPositionModal .modal-title').textContent = 'Add New Position';
+            if (typeof editingPositionId !== 'undefined') editingPositionId = null;
+        });
+    }
 }
 
 async function loadPositionsData() {
@@ -79,10 +88,10 @@ async function loadPositionsData() {
         } else {
             allPositions = [];
             filteredPositions = [];
-            if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No positions found (' + (res ? res.message : 'No response') + ')</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No positions found (' + (res ? res.message : 'No response') + ')</td></tr>';
         }
     } catch (e) {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error: ' + (e.message || e) + '</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error: ' + (e.message || e) + '</td></tr>';
     } finally {
         hideLoader();
     }
@@ -145,6 +154,8 @@ async function updatePosition(id, data) {
         if (res.success) {
             showSuccess("Position updated");
             loadPositionsData();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addPositionModal'));
+            if(modal) modal.hide();
         } else {
             showError(res.message);
         }
@@ -173,10 +184,28 @@ async function deletePosition(id) {
     }
 }
 
+let editingPositionId = null;
+
 function viewPosition(id) {
     const pos = allPositions.find(p => p.PositionID === id);
     if(pos) {
-        // Modal popup logic
+        document.getElementById('newPosTitle').value = pos.PositionTitle;
+        document.getElementById('newPosDept').value = pos.Department;
+        
+        const e = new Event('change');
+        document.getElementById('newPosDept').dispatchEvent(e);
+        
+        setTimeout(() => {
+            document.getElementById('newPosSubDept').value = pos.SubDepartment || '';
+            document.getElementById('newPosReportsTo').value = pos.ReportsToPositionID || '';
+            document.getElementById('newPosStatus').value = pos.Status;
+        }, 100);
+
+        document.querySelector('#addPositionModal .modal-title').textContent = 'Edit Position';
+        editingPositionId = id;
+        
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addPositionModal'));
+        modal.show();
     }
 }
 
@@ -227,7 +256,11 @@ function handleAddPosition() {
         Status: status
     };
     
-    createPosition(data);
+    if (typeof editingPositionId !== 'undefined' && editingPositionId) {
+        updatePosition(editingPositionId, data);
+    } else {
+        createPosition(data);
+    }
 }
 
 function validatePositionForm(data) {
@@ -249,13 +282,15 @@ function populatePositionTable() {
         const canDelete = posSessionRole === 'Admin';
         const isVacant = pos.Status === 'Vacant';
         
+        let reportsToPos = allPositions.find(p => p.PositionID === pos.ReportsToPositionID);
+        let reportsToName = reportsToPos ? reportsToPos.PositionTitle : (pos.ReportsToPositionID || '-');
+        
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="ps-4 fw-semibold">${pos.PositionID}</td>
-            <td>${pos.PositionTitle}</td>
+            <td class="ps-4 fw-semibold">${pos.PositionTitle}</td>
             <td>${pos.Department}</td>
             <td>${pos.SubDepartment || '-'}</td>
-            <td>${pos.ReportsToPositionID || '-'}</td>
+            <td>${reportsToName}</td>
             <td><span class="badge bg-${isVacant ? 'danger' : 'success'}">${pos.Status}</span></td>
             <td class="pe-4 text-end">
                 <button class="btn btn-sm btn-light me-1" title="Edit" onclick="viewPosition('${pos.PositionID}')"><i class="bi bi-pencil"></i></button>
