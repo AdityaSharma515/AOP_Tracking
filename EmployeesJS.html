@@ -55,15 +55,22 @@ function setupEventListeners() {
 }
 
 async function loadEmployees() {
+    var tbody = document.getElementById('employeesTableBody');
     showLoader();
     try {
         const res = await server.getEmployees(localStorage.getItem('sessionId'));
         if (res.success) {
+            allEmployees = Array.isArray(res.data) ? res.data : [];
+            filteredEmployees = [...allEmployees];
+            populateEmployeeTable();
+            populateManagerDropdown();
         } else {
             showError(res.message);
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No employees found.</td></tr>';
         }
     } catch (e) {
         showError("Failed to load employees");
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error loading employees: ' + (e.message || e) + '</td></tr>';
     } finally {
         hideLoader();
     }
